@@ -118,13 +118,15 @@ void CallLinkInfo::unlinkOrUpgradeImpl(VM& vm, CodeBlock* oldCodeBlock, CodeBloc
 
 CodeLocationLabel<JSInternalPtrTag> CallLinkInfo::doneLocation()
 {
+    RELEASE_ASSERT(!isDirect());
     return m_doneLocation;
 }
 
 void CallLinkInfo::setMonomorphicCallee(VM& vm, JSCell* owner, JSObject* callee, CodeBlock* codeBlock, CodePtr<JSEntryPtrTag> codePtr)
 {
+    RELEASE_ASSERT(!isDirect());
     RELEASE_ASSERT(!(bitwise_cast<uintptr_t>(callee) & polymorphicCalleeMask));
-    m_callee.set(vm, owner, callee);
+    m_calleeOrCodeBlock.set(vm, owner, callee);
 
     if (isDataIC()) {
         u.dataIC.m_codeBlock = codeBlock;
@@ -143,7 +145,8 @@ void CallLinkInfo::setMonomorphicCallee(VM& vm, JSCell* owner, JSObject* callee,
 
 void CallLinkInfo::clearCallee()
 {
-    m_callee.clear();
+    RELEASE_ASSERT(!isDirect());
+    m_calleeOrCodeBlock.clear();
     if (isDataIC()) {
         u.dataIC.m_codeBlock = nullptr;
         u.dataIC.m_monomorphicCallDestination = nullptr;
@@ -159,23 +162,63 @@ void CallLinkInfo::clearCallee()
 
 JSObject* CallLinkInfo::callee()
 {
-    RELEASE_ASSERT(!(bitwise_cast<uintptr_t>(m_callee.get()) & polymorphicCalleeMask));
-    return m_callee.get();
+    RELEASE_ASSERT(!isDirect());
+    RELEASE_ASSERT(!(bitwise_cast<uintptr_t>(m_calleeOrCodeBlock.get()) & polymorphicCalleeMask));
+    return jsCast<JSObject*>(m_calleeOrCodeBlock.get());
+}
+
+void CallLinkInfo::setCodeBlock(VM& vm, JSCell* owner, FunctionCodeBlock* codeBlock)
+{
+    RELEASE_ASSERT(isDirect());
+    m_calleeOrCodeBlock.setMayBeNull(vm, owner, codeBlock);
+}
+
+void CallLinkInfo::clearCodeBlock()
+{
+    RELEASE_ASSERT(isDirect());
+    m_calleeOrCodeBlock.clear();
+}
+
+FunctionCodeBlock* CallLinkInfo::codeBlock()
+{
+    RELEASE_ASSERT(isDirect());
+    return jsCast<FunctionCodeBlock*>(m_calleeOrCodeBlock.get());
 }
 
 void CallLinkInfo::setLastSeenCallee(VM& vm, const JSCell* owner, JSObject* callee)
 {
-    m_lastSeenCallee.set(vm, owner, callee);
+    RELEASE_ASSERT(!isDirect());
+    m_lastSeenCalleeOrExecutable.set(vm, owner, callee);
+}
+
+void CallLinkInfo::clearLastSeenCallee()
+{
+    RELEASE_ASSERT(!isDirect());
+    m_lastSeenCalleeOrExecutable.clear();
 }
 
 JSObject* CallLinkInfo::lastSeenCallee() const
 {
-    return m_lastSeenCallee.get();
+    RELEASE_ASSERT(!isDirect());
+    return jsCast<JSObject*>(m_lastSeenCalleeOrExecutable.get());
 }
 
 bool CallLinkInfo::haveLastSeenCallee() const
 {
-    return !!m_lastSeenCallee;
+    RELEASE_ASSERT(!isDirect());
+    return !!m_lastSeenCalleeOrExecutable;
+}
+
+void CallLinkInfo::setExecutableDuringCompilation(ExecutableBase* executable)
+{
+    RELEASE_ASSERT(isDirect());
+    m_lastSeenCalleeOrExecutable.setWithoutWriteBarrier(executable);
+}
+
+ExecutableBase* CallLinkInfo::executable()
+{
+    RELEASE_ASSERT(isDirect());
+    return jsCast<ExecutableBase*>(m_lastSeenCalleeOrExecutable.get());
 }
 
 void CallLinkInfo::visitWeak(VM& vm)
@@ -195,7 +238,12 @@ void CallLinkInfo::visitWeak(VM& vm)
         if (stub()) {
 #if ENABLE(JIT)
             if (!stub()->visitWeak(vm)) {
-                dataLogLnIf(Options::verboseOSR(), "At ", codeOrigin(), ", ", RawPointer(this), ": clearing call stub to ", listDump(stub()->variants()), ", stub routine ", RawPointer(stub()), ".");
+                if (UNLIKELY(Options::verboseOSR())) {
+                    dataLog(
+                        "At ", codeOrigin(), ", ", RawPointer(this), ": clearing call stub to ",
+                        listDump(stub()->variants()), ", stub routine ", RawPointer(stub()),
+                        ".\n");
+                }
                 unlinkOrUpgrade(vm, nullptr, nullptr);
                 m_clearedByGC = true;
             }
@@ -205,28 +253,55 @@ void CallLinkInfo::visitWeak(VM& vm)
         }
         break;
     }
-    case Mode::Monomorphic: {
-        auto* callee = m_callee.get();
-        if (callee && !vm.heap.isMarked(callee)) {
-            if (callee->type() == JSFunctionType) {
-                dataLogLnIf(Options::verboseOSR(), "Clearing call to ", RawPointer(callee), " (", static_cast<JSFunction*>(callee)->executable()->hashFor(specializationKind()), ").");
-                handleSpecificCallee(static_cast<JSFunction*>(callee));
+    case Mode::Monomorphic:
+    case Mode::LinkedDirect: {
+        auto* calleeOrCodeBlock = m_calleeOrCodeBlock.get();
+        if (calleeOrCodeBlock && !vm.heap.isMarked(calleeOrCodeBlock)) {
+            if (isDirect()) {
+                if (UNLIKELY(Options::verboseOSR())) {
+                    dataLog(
+                        "Clearing call to ", RawPointer(codeBlock()), " (",
+                        pointerDump(codeBlock()), ").\n");
+                }
             } else {
-                dataLogLnIf(Options::verboseOSR(), "Clearing call to ", RawPointer(callee), ".");
-                m_clearedByGC = true;
+                JSObject* callee = jsCast<JSObject*>(calleeOrCodeBlock);
+                if (callee->type() == JSFunctionType) {
+                    if (UNLIKELY(Options::verboseOSR())) {
+                        dataLog(
+                            "Clearing call to ",
+                            RawPointer(callee), " (",
+                            static_cast<JSFunction*>(callee)->executable()->hashFor(specializationKind()),
+                            ").\n");
+                    }
+                    handleSpecificCallee(static_cast<JSFunction*>(callee));
+                } else {
+                    if (UNLIKELY(Options::verboseOSR()))
+                        dataLog("Clearing call to ", RawPointer(callee), ".\n");
+                    m_clearedByGC = true;
+                }
             }
             unlinkOrUpgrade(vm, nullptr, nullptr);
+        } else if (isDirect() && !vm.heap.isMarked(m_lastSeenCalleeOrExecutable.get())) {
+            if (UNLIKELY(Options::verboseOSR())) {
+                dataLog(
+                    "Clearing call to ", RawPointer(executable()),
+                    " because the executable is dead.\n");
+            }
+            unlinkOrUpgrade(vm, nullptr, nullptr);
+            // We should only get here once the owning CodeBlock is dying, since the executable must
+            // already be in the owner's weak references.
+            m_lastSeenCalleeOrExecutable.clear();
         }
         break;
     }
     }
 
-    if (haveLastSeenCallee() && !vm.heap.isMarked(lastSeenCallee())) {
+    if (!isDirect() && haveLastSeenCallee() && !vm.heap.isMarked(lastSeenCallee())) {
         if (lastSeenCallee()->type() == JSFunctionType)
             handleSpecificCallee(jsCast<JSFunction*>(lastSeenCallee()));
         else
             m_clearedByGC = true;
-        m_lastSeenCallee.clear();
+        clearLastSeenCallee();
     }
 }
 
@@ -242,7 +317,7 @@ void CallLinkInfo::revertCallToStub()
     // need something cleaner. But this works on arm64 for now.
 
     if (isDataIC()) {
-        m_callee.clear();
+        m_calleeOrCodeBlock.clear();
         u.dataIC.m_codeBlock = nullptr;
         u.dataIC.m_monomorphicCallDestination = nullptr;
     } else {
@@ -285,13 +360,20 @@ std::tuple<CodeBlock*, BytecodeIndex> CallLinkInfo::retrieveCaller(JSCell* owner
 
 void CallLinkInfo::reset(VM&)
 {
+    if (isDirect()) {
 #if ENABLE(JIT)
-    if (type() == CallLinkInfo::Type::Optimizing)
-        static_cast<OptimizingCallLinkInfo*>(this)->setSlowPathCallDestination(LLInt::defaultCall().code());
+        clearCodeBlock();
+        static_cast<OptimizingCallLinkInfo&>(*this).initializeDirectCall();
 #endif
-    if (stub())
-        revertCallToStub();
-    clearCallee(); // This also clears the inline cache both for data and code-based caches.
+    } else {
+#if ENABLE(JIT)
+        if (type() == CallLinkInfo::Type::Optimizing)
+            static_cast<OptimizingCallLinkInfo*>(this)->setSlowPathCallDestination(LLInt::defaultCall().code());
+#endif
+        if (stub())
+            revertCallToStub();
+        clearCallee(); // This also clears the inline cache both for data and code-based caches.
+    }
     clearSeen();
     clearStub();
     if (isOnList())
@@ -315,8 +397,8 @@ void CallLinkInfo::setVirtualCall(VM& vm)
         static_cast<OptimizingCallLinkInfo*>(this)->setSlowPathCallDestination(vm.getCTIVirtualCall(callMode()).retagged<JSEntryPtrTag>().code());
 #endif
     if (isDataIC()) {
-        m_callee.clear();
-        *bitwise_cast<uintptr_t*>(m_callee.slot()) = polymorphicCalleeMask;
+        m_calleeOrCodeBlock.clear();
+        *bitwise_cast<uintptr_t*>(m_calleeOrCodeBlock.slot()) = polymorphicCalleeMask;
         u.dataIC.m_codeBlock = nullptr; // PolymorphicCallStubRoutine will set CodeBlock inside it.
         u.dataIC.m_monomorphicCallDestination = vm.getCTIVirtualCall(callMode()).code().template retagged<JSEntryPtrTag>();
     }
@@ -345,11 +427,13 @@ void OptimizingCallLinkInfo::setSlowPathCallDestination(CodePtr<JSEntryPtrTag> c
     m_slowPathCallDestination = codePtr;
 }
 
-std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitFastPathImpl(CallLinkInfo* callLinkInfo, CCallHelpers& jit, UseDataIC useDataIC, bool isTailCall, ScopedLambda<void()>&& prepareForTailCall)
+std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitFastPathImpl(CallLinkInfo* callLinkInfo, CCallHelpers& jit, GPRReg callLinkInfoGPR, UseDataIC useDataIC, bool isTailCall, ScopedLambda<void()>&& prepareForTailCall)
 {
     CCallHelpers::JumpList slowPath;
 
     if (useDataIC == UseDataIC::Yes) {
+        ASSERT(callLinkInfoGPR == BaselineJITRegisters::Call::callLinkInfoGPR);
+
 #if USE(JSVALUE32_64)
         // We need this on JSVALUE32_64 only as on JSVALUE64 a pointer comparison in the DataIC fast
         // path catches this.
@@ -361,15 +445,15 @@ std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitFa
         // address for each branch operation. Other MacroAssembler implementations handle this better by
         // using a wider range of scratch registers or more potent branching instructions.
         CCallHelpers::JumpList found;
-        jit.loadPtr(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfMonomorphicCallDestination()), BaselineJITRegisters::Call::callTargetGPR);
+        jit.loadPtr(CCallHelpers::Address(callLinkInfoGPR, offsetOfMonomorphicCallDestination()), BaselineJITRegisters::Call::callTargetGPR);
         if constexpr (isRISCV64()) {
-            CCallHelpers::Address calleeAddress(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfCallee());
+            CCallHelpers::Address calleeAddress(callLinkInfoGPR, offsetOfCallee());
             found.append(jit.branchPtr(CCallHelpers::Equal, calleeAddress, BaselineJITRegisters::Call::calleeGPR));
             found.append(jit.branchTestPtr(CCallHelpers::NonZero, calleeAddress, CCallHelpers::TrustedImm32(polymorphicCalleeMask)));
         } else {
             GPRReg scratchGPR = jit.scratchRegister();
             DisallowMacroScratchRegisterUsage disallowScratch(jit);
-            jit.loadPtr(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfCallee()), scratchGPR);
+            jit.loadPtr(CCallHelpers::Address(callLinkInfoGPR, offsetOfCallee()), scratchGPR);
             found.append(jit.branchPtr(CCallHelpers::Equal, scratchGPR, BaselineJITRegisters::Call::calleeGPR));
             found.append(jit.branchTestPtr(CCallHelpers::NonZero, scratchGPR, CCallHelpers::TrustedImm32(polymorphicCalleeMask)));
         }
@@ -383,10 +467,10 @@ std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitFa
         found.link(&jit);
         if (isTailCall) {
             prepareForTailCall();
-            jit.transferPtr(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfCodeBlock()), CCallHelpers::calleeFrameCodeBlockBeforeTailCall());
+            jit.transferPtr(CCallHelpers::Address(callLinkInfoGPR, offsetOfCodeBlock()), CCallHelpers::calleeFrameCodeBlockBeforeTailCall());
             jit.farJump(BaselineJITRegisters::Call::callTargetGPR, JSEntryPtrTag);
         } else {
-            jit.transferPtr(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfCodeBlock()), CCallHelpers::calleeFrameCodeBlockBeforeCall());
+            jit.transferPtr(CCallHelpers::Address(callLinkInfoGPR, offsetOfCodeBlock()), CCallHelpers::calleeFrameCodeBlockBeforeCall());
             jit.call(BaselineJITRegisters::Call::callTargetGPR, JSEntryPtrTag);
         }
         return std::tuple { slowPath, dispatch };
@@ -415,14 +499,16 @@ std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitFa
     return std::tuple { slowPath, CCallHelpers::Label() };
 }
 
-std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitDataICFastPath(CCallHelpers& jit)
+std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitDataICFastPath(CCallHelpers& jit, GPRReg callLinkInfoGPR)
 {
-    return emitFastPathImpl(nullptr, jit, UseDataIC::Yes, false, nullptr);
+    RELEASE_ASSERT(callLinkInfoGPR != InvalidGPRReg);
+    return emitFastPathImpl(nullptr, jit, callLinkInfoGPR, UseDataIC::Yes, false, nullptr);
 }
 
-std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitTailCallDataICFastPath(CCallHelpers& jit, ScopedLambda<void()>&& prepareForTailCall)
+std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitTailCallDataICFastPath(CCallHelpers& jit, GPRReg callLinkInfoGPR, ScopedLambda<void()>&& prepareForTailCall)
 {
-    return emitFastPathImpl(nullptr, jit, UseDataIC::Yes, true, WTFMove(prepareForTailCall));
+    RELEASE_ASSERT(callLinkInfoGPR != InvalidGPRReg);
+    return emitFastPathImpl(nullptr, jit, callLinkInfoGPR, UseDataIC::Yes, true, WTFMove(prepareForTailCall));
 }
 
 void CallLinkInfo::setStub(Ref<PolymorphicCallStubRoutine>&& newStub)
@@ -430,10 +516,10 @@ void CallLinkInfo::setStub(Ref<PolymorphicCallStubRoutine>&& newStub)
     clearStub();
     m_stub = WTFMove(newStub);
 
-    m_callee.clear();
+    m_calleeOrCodeBlock.clear();
 
     if (isDataIC()) {
-        *bitwise_cast<uintptr_t*>(m_callee.slot()) = polymorphicCalleeMask;
+        *bitwise_cast<uintptr_t*>(m_calleeOrCodeBlock.slot()) = polymorphicCalleeMask;
         u.dataIC.m_codeBlock = nullptr; // PolymorphicCallStubRoutine will set CodeBlock inside it.
         u.dataIC.m_monomorphicCallDestination = m_stub->code().code().retagged<JSEntryPtrTag>();
     } else {
@@ -445,7 +531,7 @@ void CallLinkInfo::setStub(Ref<PolymorphicCallStubRoutine>&& newStub)
     m_mode = static_cast<unsigned>(Mode::Polymorphic);
 }
 
-void CallLinkInfo::emitSlowPathImpl(VM&, CCallHelpers& jit, UseDataIC useDataIC, bool isTailCall, MacroAssembler::Label dispatchLabel)
+void CallLinkInfo::emitSlowPathImpl(VM&, CCallHelpers& jit, GPRReg callLinkInfoGPR, UseDataIC useDataIC, bool isTailCall, MacroAssembler::Label dispatchLabel)
 {
     if (useDataIC == UseDataIC::Yes) {
 #if USE(JSVALUE32_64)
@@ -462,175 +548,125 @@ void CallLinkInfo::emitSlowPathImpl(VM&, CCallHelpers& jit, UseDataIC useDataIC,
     }
 
     if (isTailCall)
-        jit.farJump(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, OptimizingCallLinkInfo::offsetOfSlowPathCallDestination()), JSEntryPtrTag);
+        jit.farJump(CCallHelpers::Address(callLinkInfoGPR, OptimizingCallLinkInfo::offsetOfSlowPathCallDestination()), JSEntryPtrTag);
     else
-        jit.call(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, OptimizingCallLinkInfo::offsetOfSlowPathCallDestination()), JSEntryPtrTag);
+        jit.call(CCallHelpers::Address(callLinkInfoGPR, OptimizingCallLinkInfo::offsetOfSlowPathCallDestination()), JSEntryPtrTag);
 }
 
-void CallLinkInfo::emitDataICSlowPath(VM& vm, CCallHelpers& jit, bool isTailCall, MacroAssembler::Label dispatchLabel)
+void CallLinkInfo::emitDataICSlowPath(VM& vm, CCallHelpers& jit, GPRReg callLinkInfoGPR, bool isTailCall, MacroAssembler::Label dispatchLabel)
 {
-    emitSlowPathImpl(vm, jit, UseDataIC::Yes, isTailCall, dispatchLabel);
+    emitSlowPathImpl(vm, jit, callLinkInfoGPR, UseDataIC::Yes, isTailCall, dispatchLabel);
 }
 
-std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo)
-{
-    if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo))
-        return std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitFastPath(jit);
-
-    return CallLinkInfo::emitDataICFastPath(jit);
-}
-
-std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitTailCallFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, ScopedLambda<void()>&& prepareForTailCall)
+std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, GPRReg callLinkInfoGPR)
 {
     if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo))
-        return std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitTailCallFastPath(jit, WTFMove(prepareForTailCall));
+        return std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitFastPath(jit, callLinkInfoGPR);
 
-    return CallLinkInfo::emitTailCallDataICFastPath(jit, WTFMove(prepareForTailCall));
+    return CallLinkInfo::emitDataICFastPath(jit, callLinkInfoGPR);
 }
 
-void CallLinkInfo::emitSlowPath(VM& vm, CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo)
+std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> CallLinkInfo::emitTailCallFastPath(CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, GPRReg callLinkInfoGPR, ScopedLambda<void()>&& prepareForTailCall)
+{
+    if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo))
+        return std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitTailCallFastPath(jit, callLinkInfoGPR, WTFMove(prepareForTailCall));
+
+    return CallLinkInfo::emitTailCallDataICFastPath(jit, callLinkInfoGPR, WTFMove(prepareForTailCall));
+}
+
+void CallLinkInfo::emitSlowPath(VM& vm, CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, GPRReg callLinkInfoGPR)
 {
     if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo)) {
-        std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitSlowPath(vm, jit);
+        std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitSlowPath(vm, jit, callLinkInfoGPR);
         return;
     }
-    emitDataICSlowPath(vm, jit, /* isTailCall */ false, { });
+    emitDataICSlowPath(vm, jit, callLinkInfoGPR, /* isTailCall */ false, { });
 }
 
-void CallLinkInfo::emitTailCallSlowPath(VM& vm, CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, MacroAssembler::Label dispatchLabel)
+void CallLinkInfo::emitTailCallSlowPath(VM& vm, CCallHelpers& jit, CompileTimeCallLinkInfo callLinkInfo, GPRReg callLinkInfoGPR, MacroAssembler::Label dispatchLabel)
 {
     if (std::holds_alternative<OptimizingCallLinkInfo*>(callLinkInfo)) {
-        std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitTailCallSlowPath(vm, jit, dispatchLabel);
+        std::get<OptimizingCallLinkInfo*>(callLinkInfo)->emitTailCallSlowPath(vm, jit, callLinkInfoGPR, dispatchLabel);
         return;
     }
-    emitDataICSlowPath(vm, jit, /* isTailCall */ true, dispatchLabel);
+    emitDataICSlowPath(vm, jit, callLinkInfoGPR, /* isTailCall */ true, dispatchLabel);
 }
 
-std::tuple<CCallHelpers::JumpList, MacroAssembler::Label> OptimizingCallLinkInfo::emitFastPath(CCallHelpers& jit)
-{
-    RELEASE_ASSERT(!isTailCall());
-
-    if (isDataIC())
-        jit.move(CCallHelpers::TrustedImmPtr(this), BaselineJITRegisters::Call::callLinkInfoGPR);
-    return emitFastPathImpl(this, jit, useDataIC(), isTailCall(), nullptr);
-}
-
-std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> OptimizingCallLinkInfo::emitTailCallFastPath(CCallHelpers& jit, ScopedLambda<void()>&& prepareForTailCall)
-{
-    RELEASE_ASSERT(isTailCall());
-
-    if (isDataIC())
-        jit.move(CCallHelpers::TrustedImmPtr(this), BaselineJITRegisters::Call::callLinkInfoGPR);
-    return emitFastPathImpl(this, jit, useDataIC(), isTailCall(), WTFMove(prepareForTailCall));
-}
-
-void OptimizingCallLinkInfo::emitSlowPath(VM& vm, CCallHelpers& jit)
-{
-    setSlowPathCallDestination(LLInt::defaultCall().code());
-    RELEASE_ASSERT(!isTailCall());
-    jit.move(CCallHelpers::TrustedImmPtr(this), BaselineJITRegisters::Call::callLinkInfoGPR);
-    return emitSlowPathImpl(vm, jit, useDataIC(), isTailCall(), { });
-}
-
-void OptimizingCallLinkInfo::emitTailCallSlowPath(VM& vm, CCallHelpers& jit, MacroAssembler::Label dispatchLabel)
-{
-    setSlowPathCallDestination(LLInt::defaultCall().code());
-    RELEASE_ASSERT(isTailCall());
-    jit.move(CCallHelpers::TrustedImmPtr(this), BaselineJITRegisters::Call::callLinkInfoGPR);
-    return emitSlowPathImpl(vm, jit, useDataIC(), isTailCall(), dispatchLabel);
-}
-
-#if ENABLE(DFG_JIT)
-void OptimizingCallLinkInfo::initializeFromDFGUnlinkedCallLinkInfo(VM&, const DFG::UnlinkedCallLinkInfo& unlinkedCallLinkInfo, CodeBlock* owner)
-{
-    m_owner = owner;
-    m_doneLocation = unlinkedCallLinkInfo.doneLocation;
-    setSlowPathCallDestination(LLInt::defaultCall().code());
-    m_codeOrigin = unlinkedCallLinkInfo.codeOrigin;
-    m_callType = unlinkedCallLinkInfo.callType;
-}
-#endif
-
-void DirectCallLinkInfo::reset()
-{
-    if (isOnList())
-        remove();
-#if ENABLE(JIT)
-    if (!isDataIC())
-        initialize();
-#endif
-    m_target = { };
-    m_codeBlock = nullptr;
-}
-
-void DirectCallLinkInfo::unlinkOrUpgradeImpl(VM&, CodeBlock* oldCodeBlock, CodeBlock* newCodeBlock)
-{
-    if (isOnList())
-        remove();
-
-    if (!!m_target) {
-        if (m_codeBlock && newCodeBlock && oldCodeBlock == m_codeBlock) {
-            ArityCheckMode arityCheck = oldCodeBlock->jitCode()->addressForCall(ArityCheckNotRequired) == m_target ? ArityCheckNotRequired : MustCheckArity;
-            auto target = newCodeBlock->jitCode()->addressForCall(arityCheck);
-            setCallTarget(newCodeBlock, CodeLocationLabel { target });
-            newCodeBlock->linkIncomingCall(nullptr, this); // This is just relinking. So owner and caller frame can be nullptr.
-            return;
-        }
-        dataLogLnIf(Options::dumpDisassembly(), "Unlinking CallLinkInfo: ", RawPointer(this));
-        reset();
-    }
-
-    // Either we were unlinked, in which case we should not have been on any list, or we unlinked
-    // ourselves so that we're not on any list anymore.
-    RELEASE_ASSERT(!isOnList());
-}
-
-void DirectCallLinkInfo::visitWeak(VM& vm)
-{
-    if (m_codeBlock && !vm.heap.isMarked(m_codeBlock)) {
-        dataLogLnIf(Options::verboseOSR(), "Clearing call to ", RawPointer(m_codeBlock), " (", pointerDump(m_codeBlock), ").");
-        unlinkOrUpgrade(vm, nullptr, nullptr);
-    }
-}
-
-CCallHelpers::JumpList DirectCallLinkInfo::emitDirectFastPath(CCallHelpers& jit)
+std::tuple<CCallHelpers::JumpList, MacroAssembler::Label> OptimizingCallLinkInfo::emitFastPath(CCallHelpers& jit, GPRReg callLinkInfoGPR)
 {
     RELEASE_ASSERT(!isTailCall());
 
     if (isDataIC()) {
-        CCallHelpers::JumpList slowPath;
-        jit.move(CCallHelpers::TrustedImmPtr(this), BaselineJITRegisters::Call::callLinkInfoGPR);
-        slowPath.append(jit.branchTestPtr(CCallHelpers::Zero, CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfTarget())));
-        jit.transferPtr(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfCodeBlock()), CCallHelpers::calleeFrameCodeBlockBeforeCall());
-        jit.call(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfTarget()), JSEntryPtrTag);
-        return slowPath;
+        RELEASE_ASSERT(callLinkInfoGPR != GPRReg::InvalidGPRReg);
+        jit.move(CCallHelpers::TrustedImmPtr(this), callLinkInfoGPR);
+        setCallLinkInfoGPR(callLinkInfoGPR);
     }
+
+    return emitFastPathImpl(this, jit, callLinkInfoGPR, useDataIC(), isTailCall(), nullptr);
+}
+
+std::tuple<MacroAssembler::JumpList, MacroAssembler::Label> OptimizingCallLinkInfo::emitTailCallFastPath(CCallHelpers& jit, GPRReg callLinkInfoGPR, ScopedLambda<void()>&& prepareForTailCall)
+{
+    RELEASE_ASSERT(isTailCall());
+
+    if (isDataIC()) {
+        RELEASE_ASSERT(callLinkInfoGPR != GPRReg::InvalidGPRReg);
+        jit.move(CCallHelpers::TrustedImmPtr(this), callLinkInfoGPR);
+        setCallLinkInfoGPR(callLinkInfoGPR);
+    }
+
+    return emitFastPathImpl(this, jit, callLinkInfoGPR, useDataIC(), isTailCall(), WTFMove(prepareForTailCall));
+}
+
+void OptimizingCallLinkInfo::emitSlowPath(VM& vm, CCallHelpers& jit, GPRReg callLinkInfoGPR)
+{
+    setSlowPathCallDestination(LLInt::defaultCall().code());
+    RELEASE_ASSERT(!isTailCall());
+    jit.move(CCallHelpers::TrustedImmPtr(this), callLinkInfoGPR);
+    return emitSlowPathImpl(vm, jit, callLinkInfoGPR, useDataIC(), isTailCall(), { });
+}
+
+void OptimizingCallLinkInfo::emitTailCallSlowPath(VM& vm, CCallHelpers& jit, GPRReg callLinkInfoGPR, MacroAssembler::Label dispatchLabel)
+{
+    setSlowPathCallDestination(LLInt::defaultCall().code());
+    RELEASE_ASSERT(isTailCall());
+    jit.move(CCallHelpers::TrustedImmPtr(this), callLinkInfoGPR);
+    return emitSlowPathImpl(vm, jit, callLinkInfoGPR, useDataIC(), isTailCall(), dispatchLabel);
+}
+
+CodeLocationLabel<JSInternalPtrTag> OptimizingCallLinkInfo::slowPathStart()
+{
+    RELEASE_ASSERT(isDirect() && !isDataIC());
+    return m_slowPathStart;
+}
+
+CodeLocationLabel<JSInternalPtrTag> OptimizingCallLinkInfo::fastPathStart()
+{
+    RELEASE_ASSERT(isDirect() && isTailCall());
+    return CodeLocationDataLabelPtr<JSInternalPtrTag>(m_fastPathStart);
+}
+
+void OptimizingCallLinkInfo::emitDirectFastPath(CCallHelpers& jit)
+{
+    RELEASE_ASSERT(isDirect() && !isTailCall());
+
+    ASSERT(UseDataIC::No == this->useDataIC());
 
     auto codeBlockStore = jit.storePtrWithPatch(CCallHelpers::TrustedImmPtr(nullptr), CCallHelpers::calleeFrameCodeBlockBeforeCall());
     auto call = jit.nearCall();
     jit.addLinkTask([=, this] (LinkBuffer& linkBuffer) {
         m_callLocation = linkBuffer.locationOfNearCall<JSInternalPtrTag>(call);
-        m_codeBlockLocation = linkBuffer.locationOf<JSInternalPtrTag>(codeBlockStore);
+        u.codeIC.m_codeBlockLocation = linkBuffer.locationOf<JSInternalPtrTag>(codeBlockStore);
     });
-    jit.addLateLinkTask([this](LinkBuffer&) {
-        repatchSpeculatively();
-    });
-    return { };
+
+    initializeDirectCallRepatch(jit);
 }
 
-CCallHelpers::JumpList DirectCallLinkInfo::emitDirectTailCallFastPath(CCallHelpers& jit, ScopedLambda<void()>&& prepareForTailCall)
+void OptimizingCallLinkInfo::emitDirectTailCallFastPath(CCallHelpers& jit, ScopedLambda<void()>&& prepareForTailCall)
 {
-    RELEASE_ASSERT(isTailCall());
+    RELEASE_ASSERT(isDirect() && isTailCall());
 
-    if (isDataIC()) {
-        CCallHelpers::JumpList slowPath;
-        jit.move(CCallHelpers::TrustedImmPtr(this), BaselineJITRegisters::Call::callLinkInfoGPR);
-        slowPath.append(jit.branchTestPtr(CCallHelpers::Zero, CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfTarget())));
-        prepareForTailCall();
-        jit.transferPtr(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfCodeBlock()), CCallHelpers::calleeFrameCodeBlockBeforeTailCall());
-        jit.farJump(CCallHelpers::Address(BaselineJITRegisters::Call::callLinkInfoGPR, offsetOfTarget()), JSEntryPtrTag);
-        return slowPath;
-    }
+    ASSERT(UseDataIC::No == this->useDataIC());
 
     auto fastPathStart = jit.label();
 
@@ -644,18 +680,17 @@ CCallHelpers::JumpList DirectCallLinkInfo::emitDirectTailCallFastPath(CCallHelpe
     jit.addLinkTask([=, this] (LinkBuffer& linkBuffer) {
         m_fastPathStart = linkBuffer.locationOf<JSInternalPtrTag>(fastPathStart);
         m_callLocation = linkBuffer.locationOfNearCall<JSInternalPtrTag>(call);
-        m_codeBlockLocation = linkBuffer.locationOf<JSInternalPtrTag>(codeBlockStore);
+        u.codeIC.m_codeBlockLocation = linkBuffer.locationOf<JSInternalPtrTag>(codeBlockStore);
     });
-    jit.addLateLinkTask([this](LinkBuffer&) {
-        repatchSpeculatively();
-    });
-    return { };
+
+    initializeDirectCallRepatch(jit);
 }
 
-void DirectCallLinkInfo::initialize()
+void OptimizingCallLinkInfo::initializeDirectCall()
 {
+    RELEASE_ASSERT(isDirect());
     ASSERT(m_callLocation);
-    ASSERT(m_codeBlockLocation);
+    ASSERT(u.codeIC.m_codeBlockLocation);
     if (isTailCall()) {
         RELEASE_ASSERT(fastPathStart());
         CCallHelpers::replaceWithJump(fastPathStart(), slowPathStart());
@@ -663,107 +698,63 @@ void DirectCallLinkInfo::initialize()
         MacroAssembler::repatchNearCall(m_callLocation, slowPathStart());
 }
 
-void DirectCallLinkInfo::setCallTarget(CodeBlock* codeBlock, CodeLocationLabel<JSEntryPtrTag> target)
+void OptimizingCallLinkInfo::setDirectCallTarget(CodeBlock* codeBlock, CodeLocationLabel<JSEntryPtrTag> target)
 {
-    m_codeBlock = codeBlock;
-    m_target = target;
+    RELEASE_ASSERT(isDirect());
 
-    if (!isDataIC()) {
-        if (isTailCall()) {
-            RELEASE_ASSERT(fastPathStart());
-            // We reserved this many bytes for the jump at fastPathStart(). Make that
-            // code nops now so we fall through to the jump to the fast path.
-            CCallHelpers::replaceWithNops(fastPathStart(), CCallHelpers::patchableJumpSize());
-        }
-
-        MacroAssembler::repatchNearCall(m_callLocation, target);
-        MacroAssembler::repatchPointer(m_codeBlockLocation, codeBlock);
+    if (isTailCall()) {
+        RELEASE_ASSERT(fastPathStart());
+        // We reserved this many bytes for the jump at fastPathStart(). Make that
+        // code nops now so we fall through to the jump to the fast path.
+        CCallHelpers::replaceWithNops(fastPathStart(), CCallHelpers::patchableJumpSize());
     }
+
+    MacroAssembler::repatchNearCall(m_callLocation, target);
+    MacroAssembler::repatchPointer(u.codeIC.m_codeBlockLocation, codeBlock);
+    m_mode = static_cast<unsigned>(Mode::LinkedDirect);
 }
 
-void DirectCallLinkInfo::setMaxArgumentCountIncludingThis(unsigned value)
+void OptimizingCallLinkInfo::initializeDirectCallRepatch(CCallHelpers& jit)
 {
-    RELEASE_ASSERT(value);
-    m_maxArgumentCountIncludingThis = value;
-}
-
-std::tuple<CodeBlock*, CodePtr<JSEntryPtrTag>> DirectCallLinkInfo::retrieveCallInfo(FunctionExecutable* functionExecutable)
-{
-    CodeSpecializationKind kind = specializationKind();
-    CodeBlock* codeBlock = functionExecutable->codeBlockFor(kind);
-    if (!codeBlock)
-        return { };
-
-    CodeBlock* ownerCodeBlock = jsDynamicCast<CodeBlock*>(owner());
-    if (!ownerCodeBlock)
-        return { };
-
-    if (ownerCodeBlock->alternative() == codeBlock)
-        return { };
-
-    unsigned argumentStackSlots = maxArgumentCountIncludingThis();
-    ArityCheckMode arityCheckMode = (argumentStackSlots < static_cast<size_t>(codeBlock->numParameters())) ? MustCheckArity : ArityCheckNotRequired;
-    CodePtr<JSEntryPtrTag> codePtr = codeBlock->addressForCallConcurrently(arityCheckMode);
-    if (!codePtr)
-        return { };
-
-    return std::tuple { codeBlock, codePtr };
-}
-
-void DirectCallLinkInfo::repatchSpeculatively()
-{
-    if (m_executable->isHostFunction()) {
+    auto* executable = this->executable();
+    if (executable->isHostFunction()) {
         CodeSpecializationKind kind = specializationKind();
         CodePtr<JSEntryPtrTag> codePtr;
         if (kind == CodeForCall)
-            codePtr = m_executable->generatedJITCodeWithArityCheckForCall();
+            codePtr = executable->generatedJITCodeWithArityCheckForCall();
         else
-            codePtr = m_executable->generatedJITCodeWithArityCheckForConstruct();
-        if (codePtr)
-            setCallTarget(nullptr, CodeLocationLabel { codePtr });
-        else
-            initialize();
-        return;
+            codePtr = executable->generatedJITCodeWithArityCheckForConstruct();
+        if (codePtr) {
+            jit.addLateLinkTask([this, codePtr](LinkBuffer&) {
+                setDirectCallTarget(nullptr, CodeLocationLabel { codePtr });
+            });
+            return;
+        }
     }
 
-    FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(m_executable);
-    if (!functionExecutable) {
-        initialize();
-        return;
-    }
-
-    auto [codeBlock, codePtr] = retrieveCallInfo(functionExecutable);
-    if (codeBlock && codePtr) {
-        m_codeBlock = codeBlock;
-        m_target = codePtr;
-        // Do not chain |this| to the calle codeBlock concurrently. It will be done in the main thread if the speculatively repatched one is still valid.
-        setCallTarget(codeBlock, CodeLocationLabel { codePtr });
-        return;
-    }
-
-    initialize();
+    jit.addLateLinkTask([this](LinkBuffer&) {
+        initializeDirectCall();
+    });
 }
 
-void DirectCallLinkInfo::validateSpeculativeRepatchOnMainThread(VM&)
+void OptimizingCallLinkInfo::setDirectCallMaxArgumentCountIncludingThis(unsigned value)
 {
-    constexpr bool verbose = false;
-    FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(m_executable);
-    if (!functionExecutable)
-        return;
-
-    auto [codeBlock, codePtr] = retrieveCallInfo(functionExecutable);
-    if (m_codeBlock != codeBlock || m_target != codePtr) {
-        dataLogLnIf(verbose, "Speculative repatching failed ", RawPointer(m_codeBlock), " ", m_target, " => ", RawPointer(codeBlock), " ", codePtr);
-        if (codeBlock && codePtr)
-            setCallTarget(codeBlock, CodeLocationLabel { codePtr });
-        else
-            reset();
-    } else
-        dataLogLnIf(verbose, "Speculative repatching succeeded ", RawPointer(m_codeBlock), " ", m_target);
-
-    if (m_codeBlock)
-        m_codeBlock->linkIncomingCall(owner(), this);
+    RELEASE_ASSERT(isDirect());
+    RELEASE_ASSERT(value);
+    m_maxArgumentCountIncludingThisForDirectCall = value;
 }
+
+#if ENABLE(DFG_JIT)
+void OptimizingCallLinkInfo::initializeFromDFGUnlinkedCallLinkInfo(VM&, const DFG::UnlinkedCallLinkInfo& unlinkedCallLinkInfo, CodeBlock* owner)
+{
+    m_owner = owner;
+    m_doneLocation = unlinkedCallLinkInfo.doneLocation;
+    setSlowPathCallDestination(LLInt::defaultCall().code());
+    m_codeOrigin = unlinkedCallLinkInfo.codeOrigin;
+    m_callType = unlinkedCallLinkInfo.callType;
+    m_callLinkInfoGPR = unlinkedCallLinkInfo.callLinkInfoGPR;
+}
+#endif
 
 #endif
 

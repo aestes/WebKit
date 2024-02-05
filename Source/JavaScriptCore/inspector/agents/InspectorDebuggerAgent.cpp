@@ -807,7 +807,6 @@ Protocol::ErrorStringOr<void> InspectorDebuggerAgent::addSymbolicBreakpoint(cons
 #if ENABLE(JIT)
     {
         JSC::DeferGCForAWhile deferGC(m_debugger.vm());
-        m_debugger.vm().notifyDebuggerHookInjected();
 
         Vector<JSC::NativeExecutable*> newNativeExecutables;
         {

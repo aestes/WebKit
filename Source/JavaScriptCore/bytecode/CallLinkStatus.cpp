@@ -140,6 +140,10 @@ CallLinkStatus CallLinkStatus::computeFor(
 CallLinkStatus CallLinkStatus::computeFromCallLinkInfo(
     const ConcurrentJSLocker&, CallLinkInfo& callLinkInfo)
 {
+    // We cannot tell you anything about direct calls.
+    if (callLinkInfo.isDirect())
+        return CallLinkStatus();
+    
     if (callLinkInfo.clearedByGC() || callLinkInfo.clearedByVirtual())
         return takesSlowPath();
     

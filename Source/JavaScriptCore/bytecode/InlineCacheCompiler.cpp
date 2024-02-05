@@ -2588,16 +2588,17 @@ void InlineCacheCompiler::generateImpl(AccessCase& accessCase)
             // We *always* know that the getter/setter, if non-null, is a cell.
             jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), BaselineJITRegisters::Call::calleeJSR.tagGPR());
 #endif
-            auto [slowCase, dispatchLabel] = CallLinkInfo::emitFastPath(jit, callLinkInfo);
+            auto [slowCase, dispatchLabel] = CallLinkInfo::emitFastPath(jit, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
             auto doneLocation = jit.label();
 
             if (accessCase.m_type == AccessCase::Getter)
                 jit.setupResults(valueRegs);
             done.append(jit.jump());
 
+            CCallHelpers::Label slowPathStart = jit.label();
             if (!slowCase.empty()) {
                 slowCase.link(&jit);
-                CallLinkInfo::emitSlowPath(vm, jit, callLinkInfo);
+                CallLinkInfo::emitSlowPath(vm, jit, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
 
                 if (accessCase.m_type == AccessCase::Getter)
                     jit.setupResults(valueRegs);
@@ -2627,7 +2628,9 @@ void InlineCacheCompiler::generateImpl(AccessCase& accessCase)
             restoreLiveRegistersFromStackForCall(spillState, callHasReturnValue);
 
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                callLinkInfo->setCodeLocations(linkBuffer.locationOf<JSInternalPtrTag>(doneLocation));
+                callLinkInfo->setCodeLocations(
+                    linkBuffer.locationOf<JSInternalPtrTag>(slowPathStart),
+                    linkBuffer.locationOf<JSInternalPtrTag>(doneLocation));
             });
         } else {
             ASSERT(accessCase.m_type == AccessCase::CustomValueGetter || accessCase.m_type == AccessCase::CustomAccessorGetter || accessCase.m_type == AccessCase::CustomValueSetter || accessCase.m_type == AccessCase::CustomAccessorSetter);
@@ -3328,17 +3331,19 @@ void InlineCacheCompiler::emitProxyObjectAccess(ProxyObjectAccessCase& accessCas
     // We *always* know that the proxy function, if non-null, is a cell.
     jit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), BaselineJITRegisters::Call::calleeJSR.tagGPR());
 #endif
-    auto [slowCase, dispatchLabel] = CallLinkInfo::emitFastPath(jit, callLinkInfo);
+    auto [slowCase, dispatchLabel] = CallLinkInfo::emitFastPath(jit, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
     auto doneLocation = jit.label();
 
     if (accessCase.m_type != AccessCase::ProxyObjectStore)
         jit.setupResults(valueRegs);
 
+    auto slowPathStart = jit.label();
     if (!slowCase.empty()) {
         auto done = jit.jump();
 
+        slowPathStart = jit.label();
         slowCase.link(&jit);
-        CallLinkInfo::emitSlowPath(vm, jit, callLinkInfo);
+        CallLinkInfo::emitSlowPath(vm, jit, callLinkInfo, BaselineJITRegisters::Call::callLinkInfoGPR);
 
         if (accessCase.m_type != AccessCase::ProxyObjectStore)
             jit.setupResults(valueRegs);
@@ -3367,7 +3372,9 @@ void InlineCacheCompiler::emitProxyObjectAccess(ProxyObjectAccessCase& accessCas
     restoreLiveRegistersFromStackForCall(spillState, dontRestore);
 
     jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-        callLinkInfo->setCodeLocations(linkBuffer.locationOf<JSInternalPtrTag>(doneLocation));
+        callLinkInfo->setCodeLocations(
+            linkBuffer.locationOf<JSInternalPtrTag>(slowPathStart),
+            linkBuffer.locationOf<JSInternalPtrTag>(doneLocation));
     });
     succeed();
 }

@@ -344,8 +344,6 @@ public:
 
     bool useDataIC() const;
 
-    CodePtr<JSEntryPtrTag> addressForCallConcurrently(ArityCheckMode) const;
-
 #if ENABLE(JIT)
     CodeBlock* replacement();
 

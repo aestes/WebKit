@@ -1574,8 +1574,6 @@ void CodeBlock::finalizeJITInlineCaches()
     if (JSC::JITCode::isOptimizingJIT(jitType())) {
         for (auto* callLinkInfo : m_jitCode->dfgCommon()->m_callLinkInfos)
             callLinkInfo->visitWeak(vm());
-        for (auto* callLinkInfo : m_jitCode->dfgCommon()->m_directCallLinkInfos)
-            callLinkInfo->visitWeak(vm());
         if (auto* jitData = dfgJITData()) {
             for (auto& callLinkInfo : jitData->callLinkInfos())
                 callLinkInfo.visitWeak(vm());
@@ -3473,14 +3471,6 @@ bool CodeBlock::useDataIC() const
         return Options::useDataICInFTL();
 #endif
     return true;
-}
-
-CodePtr<JSEntryPtrTag> CodeBlock::addressForCallConcurrently(ArityCheckMode arityCheck) const
-{
-    ConcurrentJSLocker locker(m_lock);
-    if (!m_jitCode)
-        return nullptr;
-    return m_jitCode->addressForCall(arityCheck);
 }
 
 bool CodeBlock::hasInstalledVMTrapsBreakpoints() const

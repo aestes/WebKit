@@ -1742,12 +1742,26 @@ void repatchInstanceOf(
         repatchSlowPathCall(codeBlock, stubInfo, operationInstanceOfGaveUp);
 }
 
-void linkDirectCall(DirectCallLinkInfo& callLinkInfo, CodeBlock* calleeCodeBlock, CodePtr<JSEntryPtrTag> codePtr)
+void linkDirectCall(
+    CallFrame* callFrame, OptimizingCallLinkInfo& callLinkInfo, CodeBlock* calleeCodeBlock,
+    CodePtr<JSEntryPtrTag> codePtr)
 {
+    ASSERT(!callLinkInfo.stub());
+    
     // DirectCall is only used from DFG / FTL.
-    callLinkInfo.setCallTarget(jsCast<FunctionCodeBlock*>(calleeCodeBlock), CodeLocationLabel<JSEntryPtrTag>(codePtr));
+    CodeBlock* callerCodeBlock = callFrame->codeBlock();
+
+    VM& vm = callerCodeBlock->vm();
+    
+    ASSERT(!callLinkInfo.isLinked());
+    callLinkInfo.setCodeBlock(vm, callerCodeBlock, jsCast<FunctionCodeBlock*>(calleeCodeBlock));
+    if (shouldDumpDisassemblyFor(callerCodeBlock))
+        dataLog("Linking call in ", FullCodeOrigin(callerCodeBlock, callLinkInfo.codeOrigin()), " to ", pointerDump(calleeCodeBlock), ", entrypoint at ", codePtr, "\n");
+
+    callLinkInfo.setDirectCallTarget(jsCast<FunctionCodeBlock*>(calleeCodeBlock), CodeLocationLabel<JSEntryPtrTag>(codePtr));
+
     if (calleeCodeBlock)
-        calleeCodeBlock->linkIncomingCall(callLinkInfo.owner(), &callLinkInfo);
+        calleeCodeBlock->linkIncomingCall(callerCodeBlock, &callLinkInfo);
 }
 
 void linkPolymorphicCall(VM& vm, JSCell* owner, CallFrame* callFrame, CallLinkInfo& callLinkInfo, CallVariant newVariant)

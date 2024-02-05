@@ -130,6 +130,8 @@ ALWAYS_INLINE void* linkFor(VM& vm, JSCell* owner, CallFrame* calleeFrame, CallL
 
     CodeSpecializationKind kind = callLinkInfo->specializationKind();
 
+    RELEASE_ASSERT(!callLinkInfo->isDirect());
+
     JSValue calleeAsValue = calleeFrame->guaranteedJSValueCallee();
     JSCell* calleeAsFunctionCell = getJSFunction(calleeAsValue);
     if (!calleeAsFunctionCell) {
@@ -157,6 +159,7 @@ ALWAYS_INLINE void* linkFor(VM& vm, JSCell* owner, CallFrame* calleeFrame, CallL
                 break;
             }
             case CallLinkInfo::Mode::Virtual:
+            case CallLinkInfo::Mode::LinkedDirect:
                 break;
             }
 
@@ -222,6 +225,7 @@ ALWAYS_INLINE void* linkFor(VM& vm, JSCell* owner, CallFrame* calleeFrame, CallL
         break;
     }
     case CallLinkInfo::Mode::Virtual:
+    case CallLinkInfo::Mode::LinkedDirect:
         break;
     }
 
