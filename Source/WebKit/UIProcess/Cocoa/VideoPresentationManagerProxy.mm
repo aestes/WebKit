@@ -45,9 +45,11 @@
 #import <WebCore/MediaPlayerEnums.h>
 #import <WebCore/NullVideoPresentationInterface.h>
 #import <WebCore/PlaybackSessionInterfaceAVKit.h>
+#import <WebCore/PlaybackSessionInterfaceLMK.h>
 #import <WebCore/PlaybackSessionInterfaceMac.h>
 #import <WebCore/TimeRanges.h>
 #import <WebCore/VideoPresentationInterfaceAVKit.h>
+#import <WebCore/VideoPresentationInterfaceLMK.h>
 #import <WebCore/VideoPresentationInterfaceMac.h>
 #import <WebCore/WebAVPlayerLayer.h>
 #import <WebCore/WebAVPlayerLayerView.h>

@@ -134,6 +134,8 @@ API_AVAILABLE(visionos(1.0))
 @property (nonatomic) double endTime;
 @property (nonatomic, strong, nullable) NSDate *startDate;
 @property (nonatomic, strong, nullable) NSDate *endDate;
+
+- (UIViewController *)makeViewController;
 @end
 
 NS_ASSUME_NONNULL_END

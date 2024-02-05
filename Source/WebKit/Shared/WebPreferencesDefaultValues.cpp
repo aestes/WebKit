@@ -75,7 +75,7 @@ bool defaultAlternateFormControlDesignEnabled()
 
 bool defaultVideoFullscreenRequiresElementFullscreen()
 {
-    return PAL::currentUserInterfaceIdiomIsVisionOrVisionLegacy();
+    return false;
 }
 
 #endif

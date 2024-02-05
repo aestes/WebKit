@@ -34,6 +34,8 @@ class VideoPresentationInterfaceMac;
 
 #if PLATFORM(WATCHOS)
 using PlatformVideoPresentationInterface = NullVideoPresentationInterface;
+#elif PLATFORM(VISION)
+using PlatformVideoPresentationInterface = VideoPresentationInterfaceLMK;
 #elif PLATFORM(IOS_FAMILY)
 using PlatformVideoPresentationInterface = VideoPresentationInterfaceAVKit;
 #elif PLATFORM(MAC)

@@ -35,6 +35,7 @@
 #import "WebProcessProxy.h"
 #import <WebCore/NullPlaybackSessionInterface.h>
 #import <WebCore/PlaybackSessionInterfaceAVKit.h>
+#import <WebCore/PlaybackSessionInterfaceLMK.h>
 #import <WebCore/PlaybackSessionInterfaceMac.h>
 #import <wtf/LoggerHelper.h>
 

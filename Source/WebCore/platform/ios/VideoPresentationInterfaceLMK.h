@@ -27,10 +27,11 @@
 
 #if PLATFORM(VISION)
 
-#include "PlaybackSessionInterfaceLMK.h"
 #include "VideoPresentationInterfaceIOS.h"
 
 namespace WebCore {
+
+class PlaybackSessionInterfaceLMK;
 
 class VideoPresentationInterfaceLMK : public VideoPresentationInterfaceIOS {
 
@@ -63,6 +64,7 @@ public:
     bool shouldExitFullscreenWithReason(ExitFullScreenReason);
     WEBCORE_EXPORT void setInlineRect(const FloatRect&, bool);
     bool isPlayingVideoInEnhancedFullscreen() const;
+    bool changingStandbyOnly() { return false; }
 private:
     WEBCORE_EXPORT VideoPresentationInterfaceLMK(PlaybackSessionInterfaceLMK&);
     void doSetup();
@@ -73,6 +75,7 @@ private:
     void watchdogTimerFired();
 
 };
+
 } // namespace WebCore
 
 #endif // PLATFORM(VISION)

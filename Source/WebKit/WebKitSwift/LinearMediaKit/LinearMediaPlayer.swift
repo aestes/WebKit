@@ -116,6 +116,12 @@ private class SwiftOnlyData: NSObject {
         swiftOnlyData = .init()
         super.init()
     }
+
+    func makeViewController() -> UIViewController {
+        let viewController = PlayableViewController()
+        viewController.playable = self
+        return viewController
+    }
 }
 
 extension WKSLinearMediaPlayer: @retroactive Playable {
