@@ -29,8 +29,10 @@
 #if ENABLE(FULLSCREEN_API) && PLATFORM(IOS_FAMILY)
 
 #import "FullscreenTouchSecheuristic.h"
+#import "PlaybackSessionInterfaceLMK.h"
 #import "PlaybackSessionManagerProxy.h"
 #import "UIKitUtilities.h"
+#import "VideoPresentationInterfaceLMK.h"
 #import "VideoPresentationManagerProxy.h"
 #import "WKExtrinsicButton.h"
 #import "WKFullscreenStackView.h"
@@ -40,9 +42,7 @@
 #import "WebPreferences.h"
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/PlaybackSessionInterfaceAVKit.h>
-#import <WebCore/PlaybackSessionInterfaceLMK.h>
 #import <WebCore/VideoPresentationInterfaceAVKit.h>
-#import <WebCore/VideoPresentationInterfaceLMK.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/WeakObjCPtr.h>

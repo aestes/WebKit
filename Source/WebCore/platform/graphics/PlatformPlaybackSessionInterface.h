@@ -29,13 +29,14 @@ namespace WebCore {
 
 class NullPlaybackSessionInterface;
 class PlaybackSessionInterfaceAVKit;
+class PlaybackSessionInterfaceIOS;
 class PlaybackSessionInterfaceLMK;
 class PlaybackSessionInterfaceMac;
 
 #if PLATFORM(WATCHOS)
 using PlatformPlaybackSessionInterface = NullPlaybackSessionInterface;
 #elif PLATFORM(VISION)
-using PlatformPlaybackSessionInterface = PlaybackSessionInterfaceLMK;
+using PlatformPlaybackSessionInterface = PlaybackSessionInterfaceIOS;
 #elif PLATFORM(IOS_FAMILY)
 using PlatformPlaybackSessionInterface = PlaybackSessionInterfaceAVKit;
 #elif PLATFORM(MAC)

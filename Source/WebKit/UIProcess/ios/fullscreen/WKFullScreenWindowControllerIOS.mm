@@ -30,6 +30,7 @@
 
 #import "UIKitSPI.h"
 #import "VideoPresentationManagerProxy.h"
+#import "VideoPresentationInterfaceLMK.h"
 #import "WKFullScreenViewController.h"
 #import "WKFullscreenStackView.h"
 #import "WKScrollView.h"
@@ -48,7 +49,6 @@
 #import <WebCore/IntRect.h>
 #import <WebCore/LocalizedStrings.h>
 #import <WebCore/VideoPresentationInterfaceAVKit.h>
-#import <WebCore/VideoPresentationInterfaceLMK.h>
 #import <WebCore/VideoPresentationModel.h>
 #import <WebCore/ViewportArguments.h>
 #import <objc/runtime.h>

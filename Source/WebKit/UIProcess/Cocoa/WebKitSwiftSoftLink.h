@@ -29,3 +29,5 @@
 
 SOFT_LINK_LIBRARY_FOR_HEADER(WebKit, WebKitSwift)
 SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKGroupSessionObserver)
+SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaPlayer)
+SOFT_LINK_CLASS_FOR_HEADER(WebKit, WKSLinearMediaTimeRange)

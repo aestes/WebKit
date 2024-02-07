@@ -1893,6 +1893,10 @@
 		A1A4FE6118DD54A400B5EA8A /* _WKDownloadDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = A1A4FE6018DD54A400B5EA8A /* _WKDownloadDelegate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		A1AE0EC32B166439008A2563 /* ExtensionCapabilityGranter.h in Headers */ = {isa = PBXBuildFile; fileRef = A1AE0EC12B1663D4008A2563 /* ExtensionCapabilityGranter.h */; };
 		A1B4DCE125A7923C007D178C /* MediaSampleByteRange.h in Headers */ = {isa = PBXBuildFile; fileRef = A1B4DCDF25A79211007D178C /* MediaSampleByteRange.h */; };
+		A1BA433F2B71B6D6000E7EAA /* PlaybackSessionInterfaceLMK.mm in Sources */ = {isa = PBXBuildFile; fileRef = A1BA433B2B71B6D5000E7EAA /* PlaybackSessionInterfaceLMK.mm */; };
+		A1BA43412B71B6D6000E7EAA /* PlaybackSessionInterfaceLMK.h in Headers */ = {isa = PBXBuildFile; fileRef = A1BA433D2B71B6D6000E7EAA /* PlaybackSessionInterfaceLMK.h */; };
+		A1BA43422B71B6D6000E7EAA /* VideoPresentationInterfaceLMK.h in Headers */ = {isa = PBXBuildFile; fileRef = A1BA433E2B71B6D6000E7EAA /* VideoPresentationInterfaceLMK.h */; };
+		A1BA436B2B7304C0000E7EAA /* libWebKitSwift.dylib in Product Dependencies */ = {isa = PBXBuildFile; fileRef = CD95493526159004008372D9 /* libWebKitSwift.dylib */; };
 		A1C512C9190656E500448914 /* WebPreviewLoaderClient.h in Headers */ = {isa = PBXBuildFile; fileRef = A1C512C7190656E500448914 /* WebPreviewLoaderClient.h */; };
 		A1D615672B06BBAC002D0E19 /* ExtensionCapability.h in Headers */ = {isa = PBXBuildFile; fileRef = A1D615622B06BBAB002D0E19 /* ExtensionCapability.h */; };
 		A1D6156B2B06BBAC002D0E19 /* AssertionCapability.h in Headers */ = {isa = PBXBuildFile; fileRef = A1D615662B06BBAB002D0E19 /* AssertionCapability.h */; };
@@ -2994,6 +2998,7 @@
 			files = (
 				DDAB377628234B3900890546 /* AuthenticationServicesCore.framework in Product Dependencies */,
 				DDE992F6278D071F00F60D26 /* libWebKitAdditions.a in Product Dependencies */,
+				A1BA436B2B7304C0000E7EAA /* libWebKitSwift.dylib in Product Dependencies */,
 			);
 			name = "Product Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -6851,6 +6856,10 @@
 		A1B4DCDF25A79211007D178C /* MediaSampleByteRange.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MediaSampleByteRange.h; sourceTree = "<group>"; };
 		A1B4DCE025A79211007D178C /* MediaSampleByteRange.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MediaSampleByteRange.cpp; sourceTree = "<group>"; };
 		A1B9CA382246E54A003D6DCA /* WebPaymentCoordinatorCocoa.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = WebPaymentCoordinatorCocoa.mm; sourceTree = "<group>"; };
+		A1BA433B2B71B6D5000E7EAA /* PlaybackSessionInterfaceLMK.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PlaybackSessionInterfaceLMK.mm; sourceTree = "<group>"; };
+		A1BA433C2B71B6D6000E7EAA /* VideoPresentationInterfaceLMK.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = VideoPresentationInterfaceLMK.mm; sourceTree = "<group>"; };
+		A1BA433D2B71B6D6000E7EAA /* PlaybackSessionInterfaceLMK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlaybackSessionInterfaceLMK.h; sourceTree = "<group>"; };
+		A1BA433E2B71B6D6000E7EAA /* VideoPresentationInterfaceLMK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoPresentationInterfaceLMK.h; sourceTree = "<group>"; };
 		A1C512C6190656E500448914 /* WebPreviewLoaderClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WebPreviewLoaderClient.cpp; path = ios/WebPreviewLoaderClient.cpp; sourceTree = "<group>"; };
 		A1C512C7190656E500448914 /* WebPreviewLoaderClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WebPreviewLoaderClient.h; path = ios/WebPreviewLoaderClient.h; sourceTree = "<group>"; };
 		A1D615622B06BBAB002D0E19 /* ExtensionCapability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ExtensionCapability.h; sourceTree = "<group>"; };
@@ -12988,6 +12997,10 @@
 				A182D5B21BE6BD250087A7CC /* AccessibilityIOS.mm */,
 				A1798B4F2230A0FE000764BD /* PaymentAuthorizationController.h */,
 				A1798B502230A0FE000764BD /* PaymentAuthorizationController.mm */,
+				A1BA433D2B71B6D6000E7EAA /* PlaybackSessionInterfaceLMK.h */,
+				A1BA433B2B71B6D5000E7EAA /* PlaybackSessionInterfaceLMK.mm */,
+				A1BA433E2B71B6D6000E7EAA /* VideoPresentationInterfaceLMK.h */,
+				A1BA433C2B71B6D6000E7EAA /* VideoPresentationInterfaceLMK.mm */,
 			);
 			path = ios;
 			sourceTree = "<group>";
@@ -15928,6 +15941,7 @@
 				2D8949F1182044F600E898AA /* PlatformCALayerRemoteTiledBacking.h in Headers */,
 				BCC43ABB127B95DC00317F16 /* PlatformPopupMenuData.h in Headers */,
 				F4BE0D7727AAE1CB005F0323 /* PlaybackSessionContextIdentifier.h in Headers */,
+				A1BA43412B71B6D6000E7EAA /* PlaybackSessionInterfaceLMK.h in Headers */,
 				CDA29A1B1CBDBF4100901CCF /* PlaybackSessionManager.h in Headers */,
 				CDA29A291CBEB67A00901CCF /* PlaybackSessionManagerMessages.h in Headers */,
 				CDA29A201CBEB5FB00901CCF /* PlaybackSessionManagerProxy.h in Headers */,
@@ -16131,6 +16145,7 @@
 				4A3CC18B19B0640F00D14AEF /* UserMediaPermissionRequestManagerProxy.h in Headers */,
 				4A3CC18D19B0641900D14AEF /* UserMediaPermissionRequestProxy.h in Headers */,
 				074E75FE1DF2211900D318EC /* UserMediaProcessManager.h in Headers */,
+				A1BA43422B71B6D6000E7EAA /* VideoPresentationInterfaceLMK.h in Headers */,
 				52D5A1B01C57495A00DE34A3 /* VideoPresentationManagerProxy.h in Headers */,
 				2D125C5E1857EA05003BA3CB /* ViewGestureController.h in Headers */,
 				2D1B5D5E185869C8006C6596 /* ViewGestureControllerMessages.h in Headers */,
@@ -18615,6 +18630,7 @@
 				31F060E11654318500F3281C /* NetworkSocketChannelMessageReceiver.cpp in Sources */,
 				93085DD226E2F58D000EC6A7 /* NetworkStorageManagerMessageReceiver.cpp in Sources */,
 				51452703271FBA3A000467B6 /* NotificationManagerMessageHandlerMessageReceiver.cpp in Sources */,
+				A1BA433F2B71B6D6000E7EAA /* PlaybackSessionInterfaceLMK.mm in Sources */,
 				CDA29A281CBEB67A00901CCF /* PlaybackSessionManagerMessageReceiver.cpp in Sources */,
 				CDA29A2A1CBEB67A00901CCF /* PlaybackSessionManagerProxyMessageReceiver.cpp in Sources */,
 				C15CBB3723F37ECB00300CC7 /* PreferenceObserver.mm in Sources */,
@@ -19148,7 +19164,9 @@
 		};
 		5C400E6A29DB8AB500446F6F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilter = ios;
+			platformFilters = (
+				ios,
+			);
 			target = 5C139DA129DB82E500D5117B /* WebContentCaptivePortalExtension */;
 			targetProxy = 5C400E6929DB8AB500446F6F /* PBXContainerItemProxy */;
 		};
@@ -19164,19 +19182,25 @@
 		};
 		5CE4B60729CEBB760038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilter = ios;
+			platformFilters = (
+				ios,
+			);
 			target = 5CA5A2C929CBBA1A000F1046 /* WebContentExtension */;
 			targetProxy = 5CE4B60629CEBB760038F565 /* PBXContainerItemProxy */;
 		};
 		5CE4B62329CF880B0038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilter = ios;
+			platformFilters = (
+				ios,
+			);
 			target = 5CE4B61529CF877F0038F565 /* GPUExtension */;
 			targetProxy = 5CE4B62229CF880B0038F565 /* PBXContainerItemProxy */;
 		};
 		5CE4B62529CF880B0038F565 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilter = ios;
+			platformFilters = (
+				ios,
+			);
 			target = 5CE4B60829CF87680038F565 /* NetworkingExtension */;
 			targetProxy = 5CE4B62429CF880B0038F565 /* PBXContainerItemProxy */;
 		};

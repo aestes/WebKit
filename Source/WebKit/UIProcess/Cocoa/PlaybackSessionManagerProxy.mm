@@ -29,13 +29,13 @@
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
 
 #import "MessageSenderInlines.h"
+#import "PlaybackSessionInterfaceLMK.h"
 #import "PlaybackSessionManagerMessages.h"
 #import "PlaybackSessionManagerProxyMessages.h"
 #import "WebPageProxy.h"
 #import "WebProcessProxy.h"
 #import <WebCore/NullPlaybackSessionInterface.h>
 #import <WebCore/PlaybackSessionInterfaceAVKit.h>
-#import <WebCore/PlaybackSessionInterfaceLMK.h>
 #import <WebCore/PlaybackSessionInterfaceMac.h>
 #import <wtf/LoggerHelper.h>
 
@@ -412,7 +412,16 @@ void PlaybackSessionManagerProxy::invalidate()
 PlaybackSessionManagerProxy::ModelInterfaceTuple PlaybackSessionManagerProxy::createModelAndInterface(PlaybackSessionContextIdentifier contextId)
 {
     Ref<PlaybackSessionModelContext> model = PlaybackSessionModelContext::create(*this, contextId);
-    Ref<PlatformPlaybackSessionInterface> interface = PlatformPlaybackSessionInterface::create(model);
+
+    RefPtr<PlatformPlaybackSessionInterface> interface;
+#if PLATFORM(VISION)
+    if (m_page->preferences().linearMediaPlayerEnabled())
+        interface = PlaybackSessionInterfaceLMK::create(model);
+    else
+        interface = PlaybackSessionInterfaceAVKit::create(model);
+#else
+    interface = PlatformPlaybackSessionInterface::create(model);
+#endif
 
     return std::make_tuple(WTFMove(model), WTFMove(interface));
 }

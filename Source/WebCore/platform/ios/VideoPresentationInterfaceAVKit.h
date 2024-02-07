@@ -38,16 +38,14 @@ OBJC_CLASS WebAVPlayerViewControllerDelegate;
 
 namespace WebCore {
 
-class PlaybackSessionInterfaceAVKit;
+class PlaybackSessionInterfaceIOS;
 
 class VideoPresentationInterfaceAVKit : public VideoPresentationInterfaceIOS {
 
 public:
-    WEBCORE_EXPORT static Ref<VideoPresentationInterfaceAVKit> create(PlaybackSessionInterfaceAVKit&);
+    WEBCORE_EXPORT static Ref<VideoPresentationInterfaceAVKit> create(PlaybackSessionInterfaceIOS&);
     WEBCORE_EXPORT ~VideoPresentationInterfaceAVKit();
     WEBCORE_EXPORT AVPlayerViewController *avPlayerViewController() const;
-    WEBCORE_EXPORT bool exitFullscreen(const FloatRect& finalRect);
-    WEBCORE_EXPORT void externalPlaybackChanged(bool enabled, PlaybackSessionModel::ExternalPlaybackTargetType, const String& localizedDeviceName);
 
     WEBCORE_EXPORT void hasVideoChanged(bool) final;
 
@@ -55,45 +53,32 @@ public:
     const char* logClassName() const { return "VideoPresentationInterfaceAVKit"; };
 #endif
 
-    WEBCORE_EXPORT void videoDimensionsChanged(const FloatSize&) final;
-
     WEBCORE_EXPORT void setupFullscreen(UIView& videoView, const FloatRect& initialRect, const FloatSize& videoDimensions, UIView* parentView, HTMLMediaElementEnums::VideoFullscreenMode, bool allowsPictureInPicturePlayback, bool standby, bool blocksReturnToFullscreenFromPictureInPicture);
 
     WebAVPlayerLayerView *playerLayerView() const { return m_playerLayerView.get(); }
-    WEBCORE_EXPORT void setVideoPresentationModel(VideoPresentationModel*);
-    WEBCORE_EXPORT bool pictureInPictureWasStartedWhenEnteringBackground() const;
-    WEBCORE_EXPORT void cleanupFullscreen();
+    WEBCORE_EXPORT bool pictureInPictureWasStartedWhenEnteringBackground() const final;
     WEBCORE_EXPORT void setPlayerIdentifier(std::optional<MediaPlayerIdentifier>) final;
-    WEBCORE_EXPORT void requestHideAndExitFullscreen();
-    WEBCORE_EXPORT void preparedToReturnToInline(bool visible, const FloatRect& inlineRect);
     WEBCORE_EXPORT bool mayAutomaticallyShowVideoPictureInPicture() const;
-    void willStartPictureInPicture();
-    void didStartPictureInPicture();
-    void failedToStartPictureInPicture();
-    void didStopPictureInPicture();
-    void prepareForPictureInPictureStopWithCompletionHandler(void (^)(BOOL));
-    bool shouldExitFullscreenWithReason(ExitFullScreenReason);
-    WEBCORE_EXPORT void setInlineRect(const FloatRect&, bool visible);
     bool isPlayingVideoInEnhancedFullscreen() const;
-    bool changingStandbyOnly() { return m_changingStandbyOnly; }
     bool allowsPictureInPicturePlayback() const { return m_allowsPictureInPicturePlayback; }
-private:
-    WEBCORE_EXPORT VideoPresentationInterfaceAVKit(PlaybackSessionInterfaceAVKit&);
-    void doSetup();
-    void doEnterFullscreen();
-    void doExitFullscreen();
-    void exitFullscreenHandler(BOOL success, NSError *, NextActions = NextActions());
-    void enterFullscreenHandler(BOOL success, NSError *, NextActions = NextActions());
-    void watchdogTimerFired();
 
-    RetainPtr<WebAVPlayerLayerView> m_playerLayerView;
-    bool m_shouldIgnoreAVKitCallbackAboutExitFullscreenReason { false };
+    void presentFullscreen(bool animated, CompletionHandler<void(BOOL, NSError *)>&&) final;
+    void dismissFullscreen(bool animated, CompletionHandler<void(BOOL, NSError *)>&&) final;
+private:
+    WEBCORE_EXPORT VideoPresentationInterfaceAVKit(PlaybackSessionInterfaceIOS&);
+    
+    void updateRouteSharingPolicy() final;
+    void setupPlayerViewController() final;
+    void invalidatePlayerViewController() final;
+    UIViewController *playerViewController() const final;
+    void tryToStartPictureInPicture() final;
+    void stopPictureInPicture() final;
+    void setShowsPlaybackControls(bool) final;
+    void setContentDimensions(const FloatSize&) final;
+    void setAllowsPictureInPicturePlayback(bool) final;
+
     RetainPtr<WebAVPlayerViewControllerDelegate> m_playerViewControllerDelegate;
     RetainPtr<WebAVPlayerViewController> m_playerViewController;
-    RetainPtr<UIWindow> m_parentWindow;
-    bool m_changingStandbyOnly { false };
-    bool m_allowsPictureInPicturePlayback { false };
-    RetainPtr<UIView> m_videoView;
 };
 } // namespace WebCore
 

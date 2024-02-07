@@ -3920,6 +3920,21 @@ LegacyOverflowScrollingTouchEnabled:
     WebCore:
       default: true
 
+LinearMediaPlayerEnabled:
+  type: bool
+  status: unstable
+  category: media
+  humanReadableName: "Linear Media Player"
+  humanReadableDescription: "Enable LinearMediaKit player for fullscreen"
+  condition: PLATFORM(VISION)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
 LinkModulePreloadEnabled:
   type: bool
   status: stable

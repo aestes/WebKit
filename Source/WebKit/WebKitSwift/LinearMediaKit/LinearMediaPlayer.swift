@@ -31,22 +31,23 @@ import UIKit
 import WebKitSwift
 
 private class SwiftOnlyData: NSObject {
-    var renderingConfiguration: RenderingConfiguration?
-    var thumbnailMaterial: VideoMaterial?
-    var videoMaterial: VideoMaterial?
-    var peculiarEntity: PeculiarEntity?
-    var contentMetadata: ContentMetadataContainer?
+    @Published var renderingConfiguration: RenderingConfiguration?
+    @Published var thumbnailMaterial: VideoMaterial?
+    @Published var videoMaterial: VideoMaterial?
+    @Published var peculiarEntity: PeculiarEntity?
+    @Published var contentMetadata: ContentMetadataContainer?
     
     // FIXME: It should be possible to store these directly on WKSLinearMediaPlayer since they are
     // bridged to NSDate, but a bug prevents that from compiling (rdar://121877511).
-    var startDate: Date?
-    var endDate: Date?
+    @Published var startDate: Date?
+    @Published var endDate: Date?
 }
 
 @_objcImplementation extension WKSLinearMediaPlayer {
     weak var delegate: WKSLinearMediaPlayerDelegate?
+
     var selectedPlaybackRate = 1.0
-    var presentationMode: WKSLinearMediaPresentationMode = .inline
+    var presentationMode: WKSLinearMediaPresentationMode = .none
     var error: Error?
     var canTogglePlayback = false
     var requiresLinearPlayback = false
@@ -72,7 +73,7 @@ private class SwiftOnlyData: NSObject {
     var contentInfoViewControllers: [UIViewController] = []
     var contextualActions: [UIAction] = []
     var contextualActionsInfoView: UIView?
-    var contentDimensions: NSValue?
+    var contentDimensions = CGSize(width: 0, height: 0)
     var contentMode: WKSLinearMediaContentMode = .default
     var videoLayer: CALayer?
     var anticipatedViewingMode: WKSLinearMediaViewingMode = .none
@@ -94,7 +95,7 @@ private class SwiftOnlyData: NSObject {
     var isPlayableOffline = false
     var allowPip = true
     var allowFullScreenFromInline = true
-    var isLiveStream: NSNumber?
+    var isLiveStream = false
     var recommendedViewingRatio: NSNumber?
     var fullscreenSceneBehaviors: WKSLinearMediaFullscreenBehaviors = []
     var startTime: Double = .nan
@@ -111,16 +112,22 @@ private class SwiftOnlyData: NSObject {
     }
 
     @nonobjc private var swiftOnlyData: SwiftOnlyData
+    
+    private static let preferredTimescale: CMTimeScale = 600
 
     public override init() {
         swiftOnlyData = .init()
         super.init()
     }
 
-    func makeViewController() -> UIViewController {
+    func makeViewController() -> PlayableViewController {
         let viewController = PlayableViewController()
         viewController.playable = self
         return viewController
+    }
+
+    func detachFromViewController(_ viewController: PlayableViewController) {
+        viewController.playable = nil
     }
 }
 
@@ -131,10 +138,6 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
 
     public var presentationModePublisher: AnyPublisher<PresentationMode, Never> {
         publisher(for: \.presentationMode).compactMap { $0.presentationMode }.eraseToAnyPublisher()
-    }
-
-    public func updateRenderingConfiguration(_ config: RenderingConfiguration) {
-        swiftOnlyData.renderingConfiguration = config
     }
 
     public var errorPublisher: AnyPublisher<Error?, Never> {
@@ -189,8 +192,6 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
         publisher(for: \.isTrimming).eraseToAnyPublisher()
     }
 
-    private static let preferredTimescale: CMTimeScale = 600
-
     public var forwardPlaybackEndTimePublisher: AnyPublisher<CMTime?, Never> {
         publisher(for: \.endTime)
             .dropFirst()
@@ -214,7 +215,7 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
     }
 
     public var thumbnailMaterialPublisher: AnyPublisher<VideoMaterial?, Never> {
-        publisher(for: \.swiftOnlyData.thumbnailMaterial).eraseToAnyPublisher()
+        swiftOnlyData.$thumbnailMaterial.eraseToAnyPublisher()
     }
 
     public var captionLayerPublisher: AnyPublisher<CALayer?, Never> {
@@ -262,7 +263,7 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
     }
 
     public var contentDimensionsPublisher: AnyPublisher<CGSize, Never> {
-        publisher(for: \.contentDimensions).compactMap { $0?.cgSizeValue }.eraseToAnyPublisher()
+        publisher(for: \.contentDimensions).eraseToAnyPublisher()
     }
 
     public var contentModePublisher: AnyPublisher<ContentMode, Never> {
@@ -274,11 +275,11 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
     }
 
     public var videoMaterialPublisher: AnyPublisher<VideoMaterial?, Never> {
-        publisher(for: \.swiftOnlyData.videoMaterial).eraseToAnyPublisher()
+        swiftOnlyData.$videoMaterial.eraseToAnyPublisher()
     }
 
     public var peculiarEntityPublisher: AnyPublisher<PeculiarEntity?, Never> {
-        publisher(for: \.swiftOnlyData.peculiarEntity).eraseToAnyPublisher()
+        swiftOnlyData.$peculiarEntity.eraseToAnyPublisher()
     }
 
     public var anticipatedViewingModePublisher: AnyPublisher<ViewingMode?, Never> {
@@ -338,7 +339,7 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
     }
 
     public var contentMetadataPublisher: AnyPublisher<ContentMetadataContainer, Never> {
-        publisher(for: \.swiftOnlyData.contentMetadata).compactMap { $0 }.eraseToAnyPublisher()
+        swiftOnlyData.$contentMetadata.compactMap { $0 }.eraseToAnyPublisher()
     }
 
     public var transportBarIncludesTitleViewPublisher: AnyPublisher<Bool, Never> {
@@ -362,15 +363,15 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
     }
 
     public var isLiveStreamPublisher: AnyPublisher<Bool, Never> {
-        publisher(for: \.isLiveStream).compactMap { $0?.boolValue }.eraseToAnyPublisher()
+        publisher(for: \.isLiveStream).eraseToAnyPublisher()
     }
 
     public var startDatePublisher: AnyPublisher<Date, Never> {
-        publisher(for: \.swiftOnlyData.startDate).compactMap { $0 }.eraseToAnyPublisher()
+        swiftOnlyData.$startDate.compactMap { $0 }.eraseToAnyPublisher()
     }
 
     public var endDatePublisher: AnyPublisher<Date, Never> {
-        publisher(for: \.swiftOnlyData.endDate).compactMap { $0 }.eraseToAnyPublisher()
+        swiftOnlyData.$endDate.compactMap { $0 }.eraseToAnyPublisher()
     }
 
     public var recommendedViewingRatioPublisher: AnyPublisher<Double?, Never> {
@@ -378,7 +379,12 @@ extension WKSLinearMediaPlayer: @retroactive Playable {
     }
 
     public var fullscreenSceneBehaviorsPublisher: AnyPublisher<[FullscreenBehaviors], Never> {
-        publisher(for: \.fullscreenSceneBehaviors).compactMap { [$0.fullscreenBehaviors] }.eraseToAnyPublisher()
+        Just(FullscreenBehaviors.default).eraseToAnyPublisher()
+//        publisher(for: \.fullscreenSceneBehaviors).compactMap { [$0.fullscreenBehaviors] }.eraseToAnyPublisher()
+    }
+
+    public func updateRenderingConfiguration(_ config: RenderingConfiguration) {
+        swiftOnlyData.renderingConfiguration = config
     }
 
     public func play() {

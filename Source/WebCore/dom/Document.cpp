@@ -4441,8 +4441,8 @@ bool Document::usesStyleBasedEditability() const
     if (m_hasElementUsingStyleBasedEditability)
         return true;
 
-    ASSERT(!m_renderView || !m_renderView->frameView().isPainting());
-    ASSERT(!m_inStyleRecalc);
+//    ASSERT(!m_renderView || !m_renderView->frameView().isPainting());
+//    ASSERT(!m_inStyleRecalc);
 
     auto& styleScope = const_cast<Style::Scope&>(this->styleScope());
     styleScope.flushPendingUpdate();

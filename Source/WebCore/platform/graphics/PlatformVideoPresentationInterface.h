@@ -29,13 +29,14 @@ namespace WebCore {
 
 class NullVideoPresentationInterface;
 class VideoPresentationInterfaceAVKit;
+class VideoPresentationInterfaceIOS;
 class VideoPresentationInterfaceLMK;
 class VideoPresentationInterfaceMac;
 
 #if PLATFORM(WATCHOS)
 using PlatformVideoPresentationInterface = NullVideoPresentationInterface;
 #elif PLATFORM(VISION)
-using PlatformVideoPresentationInterface = VideoPresentationInterfaceLMK;
+using PlatformVideoPresentationInterface = VideoPresentationInterfaceIOS;
 #elif PLATFORM(IOS_FAMILY)
 using PlatformVideoPresentationInterface = VideoPresentationInterfaceAVKit;
 #elif PLATFORM(MAC)
