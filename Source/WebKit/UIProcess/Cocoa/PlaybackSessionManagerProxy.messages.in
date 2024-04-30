@@ -40,6 +40,7 @@ messages -> PlaybackSessionManagerProxy {
     PictureInPictureSupportedChanged(WebKit::PlaybackSessionContextIdentifier contextId, bool pictureInPictureSupported)
     IsInWindowFullscreenActiveChanged(WebKit::PlaybackSessionContextIdentifier contextId, bool isInWindow)
     SetUpPlaybackControlsManagerWithID(WebKit::PlaybackSessionContextIdentifier contextId)
+    MediaEngineChanged(WebKit::PlaybackSessionContextIdentifier contextId)
     ClearPlaybackControlsManager()
 
     HandleControlledElementIDResponse(WebKit::PlaybackSessionContextIdentifier contextId, String id)

@@ -4075,27 +4075,18 @@ void MediaPlayerPrivateAVFoundationObjC::updateSpatialTrackingLabel()
 }
 #endif
 
-void MediaPlayerPrivateAVFoundationObjC::setVideoReceiverEndpoint(const VideoReceiverEndpoint& endpoint)
-{
 #if ENABLE(LINEAR_MEDIA_PLAYER)
+void MediaPlayerPrivateAVFoundationObjC::videoTargetChanged()
+{
     assertIsMainThread();
 
-    if (!endpoint) {
+    RefPtr player = m_player.get();
+    if (player->videoTarget())
+        [m_avPlayer addVideoTarget:player->videoTarget()];
+    else
         [m_videoLayer setPlayer:m_avPlayer.get()];
-        return;
-    }
-
-    FigVideoTargetRef videoTarget;
-    OSStatus status = FigVideoTargetCreateWithVideoReceiverEndpointID(kCFAllocatorDefault, endpoint.get(), nullptr, &videoTarget);
-    if (status != noErr)
-        return;
-
-    m_videoTarget = adoptCF(videoTarget);
-    [m_avPlayer addVideoTarget:m_videoTarget.get()];
-#else
-    UNUSED_PARAM(endpoint);
-#endif
 }
+#endif
 
 void MediaPlayerPrivateAVFoundationObjC::isInFullscreenOrPictureInPictureChanged(bool isInFullscreenOrPictureInPicture)
 {

@@ -123,6 +123,7 @@ public:
     virtual bool isPictureInPictureSupported() const = 0;
     virtual bool isPictureInPictureActive() const = 0;
     virtual bool isInWindowFullscreenActive() const { return false; }
+    virtual void playerIdentifierChanged() { }
 
 #if !RELEASE_LOG_DISABLED
     virtual const void* logIdentifier() const { return nullptr; }

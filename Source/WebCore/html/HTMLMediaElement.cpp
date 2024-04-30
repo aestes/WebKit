@@ -7668,6 +7668,7 @@ void HTMLMediaElement::createMediaPlayer() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RefPtr page = document().page();
     player->setPageIsVisible(!m_elementIsHidden, page ? page->sceneIdentifier() : ""_s);
     player->setVisibleInViewport(isVisibleInViewport());
+    player->setInFullscreenOrPictureInPicture(isFullscreen());
     schedulePlaybackControlsManagerUpdate();
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(ENCRYPTED_MEDIA)
     updateShouldContinueAfterNeedKey();

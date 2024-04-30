@@ -102,7 +102,13 @@ std::optional<MediaPlayerIdentifier> PlaybackSessionInterfaceIOS::playerIdentifi
 
 void PlaybackSessionInterfaceIOS::setPlayerIdentifier(std::optional<MediaPlayerIdentifier> identifier)
 {
+    if (m_playerIdentifier == identifier)
+        return;
+
     m_playerIdentifier = WTFMove(identifier);
+
+    if (m_playbackSessionModel)
+        m_playbackSessionModel->playerIdentifierChanged();
 }
 
 void PlaybackSessionInterfaceIOS::startObservingNowPlayingMetadata()

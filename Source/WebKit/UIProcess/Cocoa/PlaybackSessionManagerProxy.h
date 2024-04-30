@@ -33,6 +33,7 @@
 #include <WebCore/PlatformPlaybackSessionInterface.h>
 #include <WebCore/PlaybackSessionModel.h>
 #include <WebCore/TimeRanges.h>
+#include <WebCore/VideoReceiverEndpoint.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -77,6 +78,8 @@ public:
     void isInWindowFullscreenActiveChanged(bool);
 
     bool wirelessVideoPlaybackDisabled() const final { return m_wirelessVideoPlaybackDisabled; }
+    const WebCore::VideoReceiverEndpoint& videoReceiverEndpoint() const;
+    void playerIdentifierChanged() final;
 
 private:
     friend class PlaybackSessionManagerProxy;
@@ -179,6 +182,7 @@ private:
     bool m_pictureInPictureSupported { false };
     bool m_pictureInPictureActive { false };
     bool m_isInWindowFullscreenActive { false };
+    WebCore::VideoReceiverEndpoint m_videoReceiverEndpoint;
 
 #if !RELEASE_LOG_DISABLED
     const void* m_logIdentifier { nullptr };
@@ -270,12 +274,13 @@ private:
     void setVolume(PlaybackSessionContextIdentifier, double);
     void setPlayingOnSecondScreen(PlaybackSessionContextIdentifier, bool);
     void sendRemoteCommand(PlaybackSessionContextIdentifier, WebCore::PlatformMediaSession::RemoteControlCommandType, const WebCore::PlatformMediaSession::RemoteCommandArgument&);
-    void setVideoReceiverEndpoint(PlaybackSessionContextIdentifier, const WebCore::VideoReceiverEndpoint&);
+    void updateVideoReceiverEndpoint(PlaybackSessionContextIdentifier);
 #if HAVE(SPATIAL_TRACKING_LABEL)
     void setSpatialTrackingLabel(PlaybackSessionContextIdentifier, const String&);
 #endif
     void addNowPlayingMetadataObserver(PlaybackSessionContextIdentifier, const WebCore::NowPlayingMetadataObserver&);
     void removeNowPlayingMetadataObserver(PlaybackSessionContextIdentifier, const WebCore::NowPlayingMetadataObserver&);
+    void mediaEngineChanged(PlaybackSessionContextIdentifier);
 
 #if !RELEASE_LOG_DISABLED
     void setLogIdentifier(PlaybackSessionContextIdentifier, uint64_t);

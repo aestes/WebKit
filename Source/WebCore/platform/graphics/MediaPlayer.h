@@ -59,6 +59,7 @@ OBJC_CLASS NSArray;
 
 #if USE(AVFOUNDATION)
 typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct OpaqueFigVideoTarget *FigVideoTargetRef;
 #endif
 
 namespace WTF {
@@ -748,6 +749,10 @@ public:
     void setSpatialTrackingLabel(const String&);
 #endif
 
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    FigVideoTargetRef videoTarget() const;
+#endif
+
     void setInFullscreenOrPictureInPicture(bool);
     bool isInFullscreenOrPictureInPicture() const;
 
@@ -802,6 +807,10 @@ private:
 #if HAVE(SPATIAL_TRACKING_LABEL)
     String m_defaultSpatialTrackingLabel;
     String m_spatialTrackingLabel;
+#endif
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    RetainPtr<FigVideoTargetRef> m_videoTarget;
 #endif
 
     bool m_isInFullscreenOrPictureInPicture { false };

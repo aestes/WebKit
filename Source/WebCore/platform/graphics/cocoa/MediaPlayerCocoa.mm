@@ -29,12 +29,41 @@
 #if ENABLE(VIDEO) && PLATFORM(COCOA)
 
 #import "MediaPlayerPrivate.h"
+#import "VideoReceiverEndpoint.h"
+#import <wtf/OSObjectPtr.h>
+
+#import <pal/cocoa/MediaToolboxSoftLink.h>
 
 namespace WebCore {
 
+FigVideoTargetRef MediaPlayer::videoTarget() const
+{
+    return m_videoTarget.get();
+}
+
 void MediaPlayer::setVideoReceiverEndpoint(const VideoReceiverEndpoint& endpoint)
 {
-    m_private->setVideoReceiverEndpoint(endpoint);
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    if (!endpoint) {
+        WTFLogAlways("[ASE] Clearing video target");
+        m_videoTarget = nil;
+        m_private->videoTargetChanged();
+        return;
+    }
+
+    FigVideoTargetRef videoTarget;
+    OSStatus status = FigVideoTargetCreateWithVideoReceiverEndpointID(kCFAllocatorDefault, endpoint.get(), nullptr, &videoTarget);
+    if (status != noErr) {
+        WTFLogAlways("[ASE] Failed to create FigVideoTarget with error %d", status);
+        return;
+    }
+
+    WTFLogAlways("[ASE] Setting video target");
+    m_videoTarget = adoptCF(videoTarget);
+    m_private->videoTargetChanged();
+#else
+    UNUSED_PARAM(endpoint);
+#endif
 }
 
 } // namespace WebCore

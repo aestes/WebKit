@@ -65,7 +65,6 @@
 #import "CoreVideoSoftLink.h"
 #import <pal/cf/CoreMediaSoftLink.h>
 #import <pal/cocoa/AVFoundationSoftLink.h>
-#import <pal/cocoa/MediaToolboxSoftLink.h>
 
 @interface AVSampleBufferDisplayLayer (Staging_100128644)
 @property (assign, nonatomic) BOOL preventsAutomaticBackgroundingDuringVideoPlayback;
@@ -1016,7 +1015,9 @@ void MediaPlayerPrivateMediaSourceAVFObjC::ensureVideoRenderer()
     if (!m_sampleBufferVideoRenderer)
         return;
 
-    [m_sampleBufferVideoRenderer addVideoTarget:m_videoTarget.get()];
+    RefPtr player = m_player.get();
+    if (player && player->videoTarget())
+        [m_sampleBufferVideoRenderer addVideoTarget:player->videoTarget()];
 
     configureLayerOrVideoRenderer(m_sampleBufferVideoRenderer.get());
 #endif // ENABLE(LINEAR_MEDIA_PLAYER)
@@ -1161,16 +1162,27 @@ MediaPlayerPrivateMediaSourceAVFObjC::AcceleratedVideoMode MediaPlayerPrivateMed
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     RefPtr player = m_player.get();
-    if (player && player->isInFullscreenOrPictureInPicture()) {
-        if (m_videoTarget)
+    if (!player) {
+        ALWAYS_LOG(LOGIDENTIFIER, "no player");
+        return AcceleratedVideoMode::Layer;
+    }
+
+    if (player->isInFullscreenOrPictureInPicture()) {
+        if (player->videoTarget()) {
+            ALWAYS_LOG(LOGIDENTIFIER, "video target, fullscreen");
             return AcceleratedVideoMode::VideoRenderer;
+        }
+        ALWAYS_LOG(LOGIDENTIFIER, "no video target, fullscreen");
         return AcceleratedVideoMode::StagedLayer;
     }
 
-    if (m_videoTarget)
+    if (player->videoTarget()) {
+        ALWAYS_LOG(LOGIDENTIFIER, "video target, no fullscreen");
         return AcceleratedVideoMode::StagedVideoRenderer;
+    }
 #endif // ENABLE(LINEAR_MEDIA_PLAYER)
 
+    ALWAYS_LOG(LOGIDENTIFIER, "no video target, no fullscreen");
     return AcceleratedVideoMode::Layer;
 }
 
@@ -1786,21 +1798,8 @@ WebSampleBufferVideoRendering *MediaPlayerPrivateMediaSourceAVFObjC::layerOrVide
 }
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-void MediaPlayerPrivateMediaSourceAVFObjC::setVideoReceiverEndpoint(const VideoReceiverEndpoint& endpoint)
+void MediaPlayerPrivateMediaSourceAVFObjC::videoTargetChanged()
 {
-    ALWAYS_LOG(LOGIDENTIFIER, !!endpoint);
-    if (!endpoint) {
-        m_videoTarget = nullptr;
-        updateDisplayLayerAndDecompressionSession();
-        return;
-    }
-
-    FigVideoTargetRef videoTarget;
-    OSStatus status = FigVideoTargetCreateWithVideoReceiverEndpointID(kCFAllocatorDefault, endpoint.get(), nullptr, &videoTarget);
-    if (status != noErr)
-        return;
-
-    m_videoTarget = adoptCF(videoTarget);
     updateDisplayLayerAndDecompressionSession();
 }
 #endif

@@ -162,7 +162,7 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
     void needsVideoLayerChanged();
 
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    void setVideoReceiverEndpoint(const VideoReceiverEndpoint&) final;
+    virtual void videoTargetChanged() final;
 #endif
 
 #if !RELEASE_LOG_DISABLED
@@ -405,9 +405,6 @@ ALLOW_NEW_API_WITHOUT_GUARDS_END
 #if HAVE(SPATIAL_TRACKING_LABEL)
     String m_defaultSpatialTrackingLabel;
     String m_spatialTrackingLabel;
-#endif
-#if ENABLE(LINEAR_MEDIA_PLAYER)
-    RetainPtr<FigVideoTargetRef> m_videoTarget;
 #endif
 };
 

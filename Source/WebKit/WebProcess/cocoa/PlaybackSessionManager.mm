@@ -315,6 +315,7 @@ void PlaybackSessionManager::mediaEngineChanged()
         return;
 
     std::get<0>(it->value)->mediaEngineChanged();
+    m_page->send(Messages::PlaybackSessionManagerProxy::MediaEngineChanged(m_controlsManagerContextId));
 }
 
 PlaybackSessionContextIdentifier PlaybackSessionManager::contextIdForMediaElement(WebCore::HTMLMediaElement& mediaElement)

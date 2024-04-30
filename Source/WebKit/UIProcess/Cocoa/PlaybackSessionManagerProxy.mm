@@ -71,11 +71,22 @@ void PlaybackSessionModelContext::sendRemoteCommand(WebCore::PlatformMediaSessio
         m_manager->sendRemoteCommand(m_contextId, command, argument);
 }
 
+const VideoReceiverEndpoint& PlaybackSessionModelContext::videoReceiverEndpoint() const
+{
+    return m_videoReceiverEndpoint;
+}
+
+void PlaybackSessionModelContext::playerIdentifierChanged()
+{
+    if (m_manager)
+        m_manager->updateVideoReceiverEndpoint(m_contextId);
+}
+
 void PlaybackSessionModelContext::setVideoReceiverEndpoint(const WebCore::VideoReceiverEndpoint& endpoint)
 {
-    ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
+    m_videoReceiverEndpoint = endpoint;
     if (m_manager)
-        m_manager->setVideoReceiverEndpoint(m_contextId, endpoint);
+        m_manager->updateVideoReceiverEndpoint(m_contextId);
 }
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
@@ -776,12 +787,21 @@ void PlaybackSessionManagerProxy::sendRemoteCommand(PlaybackSessionContextIdenti
         m_page->send(Messages::PlaybackSessionManager::SendRemoteCommand(contextId, command, argument));
 }
 
-void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContextIdentifier contextId, const WebCore::VideoReceiverEndpoint& endpoint)
+void PlaybackSessionManagerProxy::updateVideoReceiverEndpoint(PlaybackSessionContextIdentifier contextId)
 {
 #if ENABLE(LINEAR_MEDIA_PLAYER)
-    auto interface = controlsManagerInterface();
-    if (!interface || !interface->playerIdentifier())
+    ALWAYS_LOG(LOGIDENTIFIER);
+    auto it = m_contextMap.find(contextId);
+    if (it == m_contextMap.end()) {
+        ALWAYS_LOG(LOGIDENTIFIER, "no context", contextId.loggingString());
         return;
+    }
+
+    RefPtr interface = std::get<1>(it->value);
+    if (!interface || !interface->playerIdentifier()) {
+        ALWAYS_LOG(LOGIDENTIFIER, "no playerIdentifier");
+        return;
+    }
 
     WebCore::MediaPlayerIdentifier playerIdentifier = *interface->playerIdentifier();
 
@@ -790,15 +810,28 @@ void PlaybackSessionManagerProxy::setVideoReceiverEndpoint(PlaybackSessionContex
 
     Ref gpuProcess = process->processPool().ensureProtectedGPUProcess();
     RefPtr connection = gpuProcess->protectedConnection();
-    if (!connection)
+    if (!connection) {
+        ALWAYS_LOG(LOGIDENTIFIER, "no connection");
         return;
+    }
 
     OSObjectPtr xpcConnection = connection->xpcConnection();
-    if (!xpcConnection)
+    if (!xpcConnection) {
+        ALWAYS_LOG(LOGIDENTIFIER, "no xpcConnection");
         return;
+    }
 
-    VideoReceiverEndpointMessage endpointMessage(WTFMove(processIdentifier), WTFMove(playerIdentifier), endpoint);
+    RefPtr model = std::get<0>(it->value);
+    VideoReceiverEndpoint endpoint = model ? model->videoReceiverEndpoint() : nullptr;
+
+    VideoReceiverEndpointMessage endpointMessage {
+        WTFMove(processIdentifier),
+        WTFMove(playerIdentifier),
+        endpoint
+    };
+
     xpc_connection_send_message(xpcConnection.get(), endpointMessage.encode().get());
+    ALWAYS_LOG(LOGIDENTIFIER, "success, endpoint=", endpoint.get());
 #else
     UNUSED_PARAM(contextId);
     UNUSED_PARAM(endpoint);
@@ -823,6 +856,12 @@ void PlaybackSessionManagerProxy::removeNowPlayingMetadataObserver(PlaybackSessi
 {
     if (RefPtr page = m_page.get())
         page->removeNowPlayingMetadataObserver(nowPlayingInfo);
+}
+
+void PlaybackSessionManagerProxy::mediaEngineChanged(PlaybackSessionContextIdentifier contextId)
+{
+    ALWAYS_LOG(LOGIDENTIFIER);
+    updateVideoReceiverEndpoint(contextId);
 }
 
 bool PlaybackSessionManagerProxy::wirelessVideoPlaybackDisabled()
