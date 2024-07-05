@@ -791,11 +791,13 @@ bool PageClientImpl::isFullScreen()
 void PageClientImpl::enterFullScreen(FloatSize mediaDimensions)
 {
     [[webView() fullScreenWindowController] enterFullScreen:mediaDimensions];
+    PageClientImplCocoa::isFullScreenChanged();
 }
 
 void PageClientImpl::exitFullScreen()
 {
     [[webView() fullScreenWindowController] exitFullScreen];
+    PageClientImplCocoa::isFullScreenChanged();
 }
 
 static UIInterfaceOrientationMask toUIInterfaceOrientationMask(WebCore::ScreenOrientationType orientation)
@@ -940,6 +942,7 @@ void PageClientImpl::didChangeBackgroundColor()
 
 void PageClientImpl::videoControlsManagerDidChange()
 {
+    PageClientImplCocoa::videoControlsManagerDidChange();
     [webView() _videoControlsManagerDidChange];
 }
 

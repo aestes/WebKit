@@ -2472,6 +2472,10 @@ public:
     void updateActivityState();
     void dispatchActivityStateChange();
 
+    bool canToggleFullscreen();
+    void enterFullscreen();
+    void exitFullscreen();
+
 private:
     std::optional<Vector<uint8_t>> getWebCryptoMasterKey();
     WebPageProxy(PageClient&, WebProcessProxy&, Ref<API::PageConfiguration>&&);

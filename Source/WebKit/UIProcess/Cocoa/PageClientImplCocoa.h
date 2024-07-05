@@ -133,8 +133,14 @@ public:
 
     void hasActiveNowPlayingSessionChanged(bool) final;
 
+    void videoControlsManagerDidChange() override;
+
 protected:
     RetainPtr<WKWebView> webView() const { return m_webView.get(); }
+
+#if ENABLE(FULLSCREEN_API)
+    void isFullScreenChanged();
+#endif
 
     WeakObjCPtr<WKWebView> m_webView;
     std::unique_ptr<WebCore::AlternativeTextUIController> m_alternativeTextUIController;

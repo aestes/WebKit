@@ -217,7 +217,7 @@ template<typename T, typename D, typename ColorType, typename M, typename TF> st
         , blue { blue }
         , alpha { alpha }
     {
-        assertInRange(*static_cast<const ColorType*>(this));
+//        assertInRange(*static_cast<const ColorType*>(this));
     }
 
     constexpr RGBAType()

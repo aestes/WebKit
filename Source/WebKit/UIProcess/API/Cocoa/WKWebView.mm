@@ -2846,6 +2846,11 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 #endif
 }
 
+- (BOOL)_canToggleFullscreen
+{
+    return _page->canToggleFullscreen();
+}
+
 - (BOOL)_isPictureInPictureActive
 {
 #if HAVE(TOUCH_BAR) && ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
@@ -2862,6 +2867,17 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 #else
     return NO;
 #endif
+}
+
+- (BOOL)_isFullscreenActive
+{
+#if ENABLE(FULLSCREEN_API)
+    if (RefPtr page = _page) {
+        if (CheckedPtr fullScreenManager = page->fullScreenManager())
+            return fullScreenManager->isFullScreen();
+    }
+#endif
+    return NO;
 }
 
 - (void)_togglePictureInPicture
@@ -2888,6 +2904,18 @@ static RetainPtr<NSArray> wkTextManipulationErrors(NSArray<_WKTextManipulationIt
 #if HAVE(TOUCH_BAR) && ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
     _impl->toggleInWindowFullscreen();
 #endif
+}
+
+- (void)_enterFullscreen
+{
+    if (RefPtr page = _page)
+        page->enterFullscreen();
+}
+
+- (void)_exitFullscreen
+{
+    if (RefPtr page = _page)
+        page->exitFullscreen();
 }
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)

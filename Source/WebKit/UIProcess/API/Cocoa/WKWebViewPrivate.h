@@ -379,11 +379,15 @@ for this property.
 
 @property (nonatomic, readonly) BOOL _canTogglePictureInPicture;
 @property (nonatomic, readonly) BOOL _canToggleInWindow;
+@property (nonatomic, readonly) BOOL _canToggleFullscreen;
 @property (nonatomic, readonly) BOOL _isPictureInPictureActive;
 @property (nonatomic, readonly) BOOL _isInWindowActive;
+@property (nonatomic, readonly) BOOL _isFullscreenActive;
 - (void)_updateMediaPlaybackControlsManager;
 - (void)_togglePictureInPicture;
 - (void)_toggleInWindow;
+- (void)_enterFullscreen;
+- (void)_exitFullscreen;
 - (void)_stopAllMediaPlayback;
 - (void)_suspendAllMediaPlayback;
 - (void)_resumeAllMediaPlayback;

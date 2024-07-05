@@ -804,11 +804,13 @@ bool PageClientImpl::isFullScreen()
 void PageClientImpl::enterFullScreen()
 {
     [m_impl->fullScreenWindowController() enterFullScreen:nil];
+    PageClientImplCocoa::isFullScreenChanged();
 }
 
 void PageClientImpl::exitFullScreen()
 {
     [m_impl->fullScreenWindowController() exitFullScreen];
+    PageClientImplCocoa::isFullScreenChanged();
 }
 
 void PageClientImpl::beganEnterFullScreen(const IntRect& initialFrame, const IntRect& finalFrame)
@@ -940,6 +942,7 @@ void PageClientImpl::didHandleAcceptedCandidate()
 
 void PageClientImpl::videoControlsManagerDidChange()
 {
+    PageClientImplCocoa::videoControlsManagerDidChange();
     m_impl->videoControlsManagerDidChange();
 }
 

@@ -327,4 +327,18 @@ void PageClientImplCocoa::hasActiveNowPlayingSessionChanged(bool hasActiveNowPla
     [m_webView didChangeValueForKey:@"_hasActiveNowPlayingSession"];
 }
 
+void PageClientImplCocoa::videoControlsManagerDidChange()
+{
+    [m_webView willChangeValueForKey:@"_canToggleFullscreen"];
+    [m_webView didChangeValueForKey:@"_canToggleFullscreen"];
+}
+
+#if ENABLE(FULLSCREEN_API)
+void PageClientImplCocoa::isFullScreenChanged()
+{
+    [m_webView willChangeValueForKey:@"_isFullscreenActive"];
+    [m_webView didChangeValueForKey:@"_isFullscreenActive"];
+}
+#endif
+
 } // namespace WebKit
