@@ -1309,10 +1309,12 @@ std::optional<NowPlayingInfo> MediaElementSession::computeNowPlayingInfo() const
         allowsNowPlayingControlsVisibility
     };
 
+#if !PLATFORM(APPLETV)
     if (page->usesEphemeralSession()) {
         info.metadata = { };
         return info;
     }
+#endif
 
 #if ENABLE(MEDIA_SESSION)
     if (RefPtr session = mediaSession())
