@@ -639,12 +639,13 @@ void UserMediaCaptureManagerProxy::startProducingData(RealtimeMediaSourceIdentif
         return;
     }
 #endif // ENABLE(EXTENSION_CAPABILITIES) && !PLATFORM(IOS_FAMILY_SIMULATOR)
-    m_connectionProxy->startProducingData(source->deviceType());
+    m_connectionProxy->startProducingData(source->deviceType(), pageIdentifier);
     proxy->start();
 }
 
-void UserMediaCaptureManagerProxy::stopProducingData(RealtimeMediaSourceIdentifier id)
+void UserMediaCaptureManagerProxy::stopProducingData(RealtimeMediaSourceIdentifier id, WebCore::PageIdentifier pageIdentifier)
 {
+    m_connectionProxy->stopProducingData(pageIdentifier);
     if (RefPtr proxy = m_proxies.get(id))
         proxy->stop();
 }

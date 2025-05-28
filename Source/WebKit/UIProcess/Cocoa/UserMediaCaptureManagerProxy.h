@@ -77,7 +77,8 @@ public:
 #if ENABLE(EXTENSION_CAPABILITIES)
         virtual bool setCurrentMediaEnvironment(WebCore::PageIdentifier) { return false; };
 #endif
-        virtual void startProducingData(WebCore::CaptureDevice::DeviceType) { }
+        virtual void startProducingData(WebCore::CaptureDevice::DeviceType, WebCore::PageIdentifier) { }
+        virtual void stopProducingData(WebCore::PageIdentifier) { }
         virtual RemoteVideoFrameObjectHeap* remoteVideoFrameObjectHeap() { return nullptr; }
 
         virtual void startMonitoringCaptureDeviceRotation(WebCore::PageIdentifier, const String&) { }
@@ -112,7 +113,7 @@ private:
     using CreateSourceCallback = CompletionHandler<void(const WebCore::CaptureSourceError&, const WebCore::RealtimeMediaSourceSettings&, const WebCore::RealtimeMediaSourceCapabilities&)>;
     void createMediaSourceForCaptureDeviceWithConstraints(WebCore::RealtimeMediaSourceIdentifier, const WebCore::CaptureDevice& deviceID, WebCore::MediaDeviceHashSalts&&, WebCore::MediaConstraints&&, bool shouldUseGPUProcessRemoteFrames, WebCore::PageIdentifier, CreateSourceCallback&&);
     void startProducingData(WebCore::RealtimeMediaSourceIdentifier, WebCore::PageIdentifier);
-    void stopProducingData(WebCore::RealtimeMediaSourceIdentifier);
+    void stopProducingData(WebCore::RealtimeMediaSourceIdentifier, WebCore::PageIdentifier);
     void removeSource(WebCore::RealtimeMediaSourceIdentifier);
     void capabilities(WebCore::RealtimeMediaSourceIdentifier, CompletionHandler<void(WebCore::RealtimeMediaSourceCapabilities&&)>&&);
     void applyConstraints(WebCore::RealtimeMediaSourceIdentifier, WebCore::MediaConstraints&&);

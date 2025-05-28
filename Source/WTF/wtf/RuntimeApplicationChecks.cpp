@@ -33,6 +33,7 @@
 namespace WTF {
 
 #if !ASSERT_MSG_DISABLED
+static bool parentProcessIDWasQueried;
 static bool presentingApplicationPIDOverrideWasQueried;
 #endif
 
@@ -57,6 +58,28 @@ void setLegacyPresentingApplicationPID(int pid)
     ASSERT(RunLoop::isMain());
     ASSERT_WITH_MESSAGE(!presentingApplicationPIDOverrideWasQueried, "legacyPresentingApplicationPID() should not be called before setLegacyPresentingApplicationPID()");
     presentingApplicationPIDOverride() = pid;
+}
+
+static std::optional<ProcessID>& parentProcessPIDValue()
+{
+    static NeverDestroyed<std::optional<ProcessID>> parentProcessID;
+#if !ASSERT_MSG_DISABLED
+    parentProcessIDWasQueried = true;
+#endif
+    return parentProcessID;
+}
+
+void setParentProcessPID(ProcessID pid)
+{
+    ASSERT(RunLoop::isMain());
+    ASSERT_WITH_MESSAGE(!parentProcessIDWasQueried, "parentProcessPID() should not be called before setParentProcessPID()");
+    parentProcessPIDValue() = pid;
+}
+
+const std::optional<ProcessID>& parentProcessPID()
+{
+    ASSERT(RunLoop::isMain());
+    return parentProcessPIDValue();
 }
 
 #if HAVE(AUDIT_TOKEN)

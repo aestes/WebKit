@@ -152,6 +152,7 @@
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/NativePromise.h>
 #include <wtf/Ref.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
@@ -9964,6 +9965,9 @@ std::optional<ProcessID> HTMLMediaElement::mediaSessionPresentingApplicationPID(
     if (page->settings().mediaCapabilityGrantsEnabled())
         return std::nullopt;
 #endif
+
+    if (parentProcessPID())
+        return parentProcessPID();
 
     return page->presentingApplicationPID();
 }

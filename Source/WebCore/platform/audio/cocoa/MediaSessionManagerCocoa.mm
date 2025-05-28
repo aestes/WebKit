@@ -224,15 +224,6 @@ void MediaSessionManagerCocoa::beginInterruption(PlatformMediaSession::Interrupt
     PlatformMediaSessionManager::beginInterruption(type);
 }
 
-void MediaSessionManagerCocoa::prepareToSendUserMediaPermissionRequestForPage(Page& page)
-{
-#if ENABLE(EXTENSION_CAPABILITIES)
-    if (page.settings().mediaCapabilityGrantsEnabled())
-        return;
-#endif
-    providePresentingApplicationPIDIfNecessary(page.presentingApplicationPID());
-}
-
 String MediaSessionManagerCocoa::audioTimePitchAlgorithmForMediaPlayerPitchCorrectionAlgorithm(MediaPlayer::PitchCorrectionAlgorithm pitchCorrectionAlgorithm, bool preservesPitch, double rate)
 {
     if (!preservesPitch || !rate || rate == 1.)
@@ -517,7 +508,7 @@ void MediaSessionManagerCocoa::updateNowPlayingInfo()
     }
     if (!m_registeredAsNowPlayingApplication) {
         m_registeredAsNowPlayingApplication = true;
-        providePresentingApplicationPIDIfNecessary(session->presentingApplicationPID());
+        session->providePresentingApplicationPID();
     }
 
     updateActiveNowPlayingSession(session);

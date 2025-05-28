@@ -84,10 +84,10 @@ void RemoteRealtimeMediaSourceProxy::startProducingData(WebCore::PageIdentifier 
     protectedConnection()->send(Messages::UserMediaCaptureManagerProxy::StartProducingData { m_identifier, pageIdentifier }, 0);
 }
 
-void RemoteRealtimeMediaSourceProxy::stopProducingData()
+void RemoteRealtimeMediaSourceProxy::stopProducingData(WebCore::PageIdentifier pageIdentifier)
 {
     m_interrupted = false;
-    protectedConnection()->send(Messages::UserMediaCaptureManagerProxy::StopProducingData { m_identifier }, 0);
+    protectedConnection()->send(Messages::UserMediaCaptureManagerProxy::StopProducingData { m_identifier, pageIdentifier }, 0);
 }
 
 void RemoteRealtimeMediaSourceProxy::endProducingData()

@@ -46,6 +46,7 @@
 #include "PlatformMediaSessionManager.h"
 #include "Quirks.h"
 #include <wtf/MediaTime.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MEDIA_STREAM)
@@ -732,6 +733,9 @@ std::optional<ProcessID> AudioContext::mediaSessionPresentingApplicationPID() co
     if (page->settings().mediaCapabilityGrantsEnabled())
         return std::nullopt;
 #endif
+
+    if (parentProcessPID())
+        return parentProcessPID();
 
     return page->presentingApplicationPID();
 }

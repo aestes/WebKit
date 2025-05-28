@@ -78,8 +78,6 @@ public:
     virtual bool haveEverRegisteredAsNowPlayingApplication() const { return false; }
     virtual void resetHaveEverRegisteredAsNowPlayingApplicationForTesting() { };
 
-    virtual void prepareToSendUserMediaPermissionRequestForPage(Page&) { }
-
     virtual bool willIgnoreSystemInterruptions() const = 0;
     virtual void setWillIgnoreSystemInterruptions(bool) = 0;
     virtual void beginInterruption(PlatformMediaSession::InterruptionType) = 0;

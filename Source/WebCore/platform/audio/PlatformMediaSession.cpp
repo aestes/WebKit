@@ -272,6 +272,8 @@ bool PlatformMediaSession::clientWillBeginPlayback()
         return false;
     }
 
+    providePresentingApplicationPID();
+
     m_stateToRestore = State::Playing;
     setState(State::Playing);
     return true;

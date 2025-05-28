@@ -35,6 +35,7 @@
 #include <WebCore/LogInitialization.h>
 #include <pal/SessionID.h>
 #include <wtf/LogInitialization.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/SetForScope.h>
 #include <wtf/WTFProcess.h>
 
@@ -132,8 +133,9 @@ void AuxiliaryProcess::initializeProcessName(const AuxiliaryProcessInitializatio
 {
 }
 
-void AuxiliaryProcess::initializeConnection(IPC::Connection*)
+void AuxiliaryProcess::initializeConnection(IPC::Connection* connection)
 {
+    setParentProcessPID(connection->remoteProcessID());
 }
 
 bool AuxiliaryProcess::dispatchMessage(IPC::Connection& connection, IPC::Decoder& decoder)

@@ -70,7 +70,7 @@ public:
     bool isEnded() const { return m_isEnded; }
     void end();
     void startProducingData(WebCore::PageIdentifier);
-    void stopProducingData();
+    void stopProducingData(WebCore::PageIdentifier);
     void endProducingData();
     void applyConstraints(const WebCore::MediaConstraints&, WebCore::RealtimeMediaSource::ApplyConstraintsHandler&&);
 

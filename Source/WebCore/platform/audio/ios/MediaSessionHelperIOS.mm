@@ -271,6 +271,8 @@ void MediaSessionHelperIOS::providePresentingApplicationPID(int pid, ShouldOverr
     if (m_presentedApplicationPID && (*m_presentedApplicationPID == pid || shouldOverride == ShouldOverride::No))
         return;
 
+    WTFLogAlways("[ASE] providePresentingApplicationPID %d", pid);
+
     m_presentedApplicationPID = pid;
 
     if (!canLoadAVSystemController_PIDToInheritApplicationStateFrom())

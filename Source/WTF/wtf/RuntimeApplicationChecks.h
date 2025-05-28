@@ -34,6 +34,9 @@ namespace WTF {
 WTF_EXPORT_PRIVATE void setLegacyPresentingApplicationPID(int);
 WTF_EXPORT_PRIVATE int legacyPresentingApplicationPID();
 
+WTF_EXPORT_PRIVATE void setParentProcessPID(ProcessID);
+WTF_EXPORT_PRIVATE const std::optional<ProcessID>& parentProcessPID();
+
 #if HAVE(AUDIT_TOKEN)
 WTF_EXPORT_PRIVATE ProcessID pidFromAuditToken(const audit_token_t&);
 #endif
@@ -86,11 +89,13 @@ using WTF::isInModelProcess;
 using WTF::isInNetworkProcess;
 using WTF::isInWebProcess;
 using WTF::legacyPresentingApplicationPID;
+using WTF::parentProcessPID;
 using WTF::processType;
 using WTF::processTypeDescription;
 using WTF::setAuxiliaryProcessType;
 using WTF::setAuxiliaryProcessTypeForTesting;
 using WTF::setLegacyPresentingApplicationPID;
+using WTF::setParentProcessPID;
 
 #if HAVE(AUDIT_TOKEN)
 using WTF::pidFromAuditToken;

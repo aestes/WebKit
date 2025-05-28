@@ -207,13 +207,7 @@ private:
         case CaptureDevice::DeviceType::Microphone:
             return process->allowsAudioCapture();
         case CaptureDevice::DeviceType::Camera:
-            if (!process->allowsVideoCapture())
-                return false;
-#if PLATFORM(IOS_FAMILY)
-            ASSERT(process->presentingApplicationPID(pageIdentifier));
-            MediaSessionHelper::sharedHelper().providePresentingApplicationPID(process->presentingApplicationPID(pageIdentifier));
-#endif
-            return true;
+            return process->allowsVideoCapture();
         case CaptureDevice::DeviceType::Screen:
             return process->allowsDisplayCapture();
         case CaptureDevice::DeviceType::Window:
@@ -243,19 +237,26 @@ private:
     }
 #endif
 
-    void startProducingData(CaptureDevice::DeviceType type) final
+    void startProducingData(CaptureDevice::DeviceType type, WebCore::PageIdentifier pageIdentifier) final
     {
         RefPtr process = m_process.get();
         if (type == CaptureDevice::DeviceType::Microphone)
             process->startCapturingAudio();
 #if PLATFORM(IOS_FAMILY)
         else if (type == CaptureDevice::DeviceType::Camera) {
-            process->overridePresentingApplicationPIDIfNeeded();
+            WTFLogAlways("[ASE] providePresentingApplicationPID didStart camera %d", process->presentingApplicationPID(pageIdentifier));
+            ASSERT(process->presentingApplicationPID(pageIdentifier));
+            MediaSessionHelper::sharedHelper().providePresentingApplicationPID(process->presentingApplicationPID(pageIdentifier), MediaSessionHelper::ShouldOverride::Yes);
 #if HAVE(AVCAPTUREDEVICEROTATIONCOORDINATOR)
             AVVideoCaptureSource::setUseAVCaptureDeviceRotationCoordinatorAPI(process->sharedPreferencesForWebProcess() && process->sharedPreferencesForWebProcess()->useAVCaptureDeviceRotationCoordinatorAPI);
 #endif
         }
 #endif
+    }
+
+    void stopProducingData(WebCore::PageIdentifier pageIdentifier) final
+    {
+        
     }
 
     const ProcessIdentity& resourceOwner() const final
@@ -905,11 +906,6 @@ RemoteMediaSessionHelperProxy& GPUConnectionToWebProcess::mediaSessionHelperProx
 void GPUConnectionToWebProcess::ensureMediaSessionHelper()
 {
     mediaSessionHelperProxy();
-}
-
-void GPUConnectionToWebProcess::overridePresentingApplicationPIDIfNeeded()
-{
-    mediaSessionHelperProxy().overridePresentingApplicationPIDIfNeeded();
 }
 #endif
 
