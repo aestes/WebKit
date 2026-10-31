@@ -30,8 +30,6 @@
 
 #import "_WKCaptionStyleMenuControllerInternal.h"
 
-#import <AVKit/AVLegibleMediaOptionsMenuController.h>
-
 #import <UIKit/UIKit.h>
 #import <WebCore/CaptionUserPreferencesMediaAF.h>
 #import <pal/spi/cocoa/AVKitSPI.h>
